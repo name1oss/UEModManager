@@ -1,0 +1,45 @@
+{
+  "name": "stellar-blade-mod-manager",
+  "version": "1.0.0",
+  "description": "UE Mod Manager Desktop App",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "chcp 65001 && electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "7zip-bin": "^5.2.0",
+    "adm-zip": "^0.5.10",
+    "better-sqlite3": "^9.4.0",
+    "fs-extra": "^11.2.0",
+    "mime-types": "^2.1.35",
+    "node-7z": "^3.0.0",
+    "node-unrar-js": "^2.0.2"
+  },
+  "build": {
+    "appId": "com.stellarblade.modmanager",
+    "productName": "UE Mod Manager",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "assets/**/*",
+      "!dist/*",
+      "!data/*",
+      "!**/*.py"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/renderer/assets/icon.ico"
+    }
+  }
+}

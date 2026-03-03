@@ -1,0 +1,22 @@
+﻿/* =====================================================
+   UE Mod Manager — Main CSS Entry Point
+   All styles are split into partials:
+   - _variables.css  : CSS variables & theme overrides
+   - _base.css       : html/body/img, keyframes, scrollbar
+   - _titlebar.css   : custom title bar & background layers
+   - _sidebar.css    : sidebar, buttons, dropdown, footer
+   - _main.css       : main content, search, filters, mod list
+   - _modals.css     : modals, neon buttons, context menu
+   - _settings.css   : toasts, tags, preview, settings panel
+   - _presets.css    : presets modal, drag/drop, groups, picker
+   ===================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+@import '_variables.css';
+@import '_base.css';
+@import '_titlebar.css';
+@import '_sidebar.css';
+@import '_main.css';
+@import '_modals.css';
+@import '_settings.css';
+@import '_presets.css';

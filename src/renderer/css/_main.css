@@ -1,0 +1,747 @@
+﻿/* ========================================= */
+/* Main Content */
+/* ========================================= */
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: transparent;
+    position: relative;
+}
+
+/* ========================================= */
+/* Header / Top Controls Panel (Refactored) */
+/* ========================================= */
+.top-controls-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    margin: 2rem 3rem 1rem 3rem;
+    padding: 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: var(--shadow-md);
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.top-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+}
+
+.top-controls-row.bottom-row {
+    margin-top: -0.5rem;
+    /* Tighter spacing between rows */
+}
+
+/* Restyle search wrapper for new panel */
+.search-bar-wrapper {
+    flex-grow: 1;
+    max-width: none;
+    /* Let it fill the row */
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1.6rem;
+    color: var(--text-disabled);
+    pointer-events: none;
+    font-size: 1.6rem;
+    z-index: 2;
+    transition: color 0.3s;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 1.4rem 4rem 1.4rem 4.5rem;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 30px;
+    color: var(--text-primary);
+    font-size: 1.4rem;
+    transition: all 0.2s ease-out;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
+    backdrop-filter: blur(5px);
+}
+
+input[type="text"]::placeholder {
+    color: var(--text-disabled);
+    opacity: 0.8;
+}
+
+body[data-theme="light"] input[type="text"]::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+body[data-theme="light"] .search-icon {
+    color: var(--text-secondary);
+}
+
+input[type="text"]:focus {
+    border-color: var(--accent-blue);
+    background-color: var(--bg-card);
+    /* Slightly lighter on focus */
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(122, 162, 247, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+input[type="text"]:focus+.search-icon,
+.search-bar-wrapper:focus-within .search-icon {
+    color: var(--accent-blue);
+}
+
+/* Keeps Status Filters grouped on the right of Row 1 */
+.header-filters {
+    flex-shrink: 0;
+}
+
+.filter-group {
+    display: flex;
+    gap: 1rem;
+}
+
+.filter-buttons {
+    display: flex;
+    background-color: var(--bg-input);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.tag-filter-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    /* Ensure space for border */
+    color: var(--text-secondary);
+    padding: 0.8rem 1.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: 500;
+    transition: var(--transition-fast);
+    position: relative;
+    margin: 0 1px;
+}
+
+.tag-filter-btn:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--border-color-light);
+    /* Hover border */
+}
+
+body[data-theme="light"] .tag-filter-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tag-filter-btn.active {
+    background-color: var(--accent-blue);
+    color: #1a1b26;
+    /* Always dark text on blue btn */
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(122, 162, 247, 0.4);
+    border-color: transparent;
+}
+
+body[data-theme="light"] .tag-filter-btn.active {
+    color: white;
+}
+
+/* Removes old spacing from tag filters */
+.tags-filter-container {
+    padding: 0;
+    background: transparent;
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    flex-shrink: 1;
+    /* allow shrinking while search grows */
+    mask-image: none;
+    /* remove old fade effect to keep it sharp in the panel */
+    -webkit-mask-image: none;
+    align-items: center;
+}
+
+.tags-filter-container::-webkit-scrollbar {
+    height: 0px;
+}
+
+.tag-only-filter-btn {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1.5rem;
+    color: var(--text-secondary);
+    border-radius: 20px;
+    font-size: 1.2rem;
+    transition: var(--transition-fast);
+}
+
+.tag-only-filter-btn:hover {
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    background-color: var(--bg-card);
+}
+
+.tag-only-filter-btn.active {
+    background-color: rgba(122, 162, 247, 0.15);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    box-shadow: 0 0 15px rgba(122, 162, 247, 0.1);
+}
+
+body[data-theme="light"] .tag-only-filter-btn.active {
+    background-color: var(--accent-blue);
+    color: white;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+}
+
+/* Container for sort dropdown */
+.sort-container {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+/* Mod list table headers */
+.mod-list-header {
+    display: flex;
+    padding: 0.5rem 3rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-disabled);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.header-col {
+    display: none;
+}
+
+.header-actions {
+    display: block;
+}
+
+/* --- Dropdown / Select Styles (Premium) --- */
+select,
+.sort-dropdown {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: var(--bg-input);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa5ce' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.2rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    outline: none;
+    font-weight: 500;
+    padding: 0.6rem 2.8rem 0.6rem 1.2rem;
+    /* Extra right padding for arrow */
+    transition: all 0.2s;
+    box-shadow: var(--shadow-sm);
+    font-family: var(--font-family);
+}
+
+select:hover,
+.sort-dropdown:hover {
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+    background-color: var(--bg-card);
+    box-shadow: 0 0 10px rgba(122, 162, 247, 0.15);
+}
+
+select:focus,
+.sort-dropdown:focus {
+    border-color: var(--accent-blue);
+    background-color: var(--bg-dark-2);
+    box-shadow: 0 0 0 2px rgba(122, 162, 247, 0.2);
+}
+
+select option,
+.sort-dropdown option {
+    background-color: var(--bg-dark-2);
+    color: var(--text-primary);
+    padding: 1rem;
+}
+
+/* --- Component Group Headers --- */
+.block-header {
+    font-size: 0.85rem;
+    color: var(--text-disabled);
+    margin-bottom: 0.4rem;
+    margin-top: 0.8rem;
+    padding-left: 0.5rem;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+.group-block.unique-block .block-header {
+    color: var(--accent-blue);
+    opacity: 0.7;
+}
+
+.group-block.intersection-block .block-header {
+    color: var(--accent-purple);
+    opacity: 0.7;
+}
+
+/* --- Mod List Area --- */
+.mod-list-scroll-area {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0 1rem 2rem 3rem;
+    /* Reduced right padding so scrollbar is at the edge */
+    scroll-behavior: smooth;
+
+    /* Disable browser's native drag-and-drop auto-scroll */
+    /* This prevents the browser's default small fixed scroll zone (10-20px) */
+    /* from interfering with our custom viewport-based scroll trigger */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.mod-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding-right: 2rem;
+    /* Give padding to inner list to compensate for scroll-area padding */
+}
+
+/* --- CARD STYLE: Mod Items --- */
+.mod-item,
+.component-wrapper {
+    will-change: transform;
+}
+
+.mod-item {
+    display: grid;
+    /* Name(Main) | Tags | Status */
+    grid-template-columns: minmax(300px, 4fr) 3fr auto;
+    gap: 1.5rem;
+    padding: 1.8rem 2.5rem;
+
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-sm);
+
+    align-items: center;
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    cursor: default;
+
+    backdrop-filter: blur(8px);
+    margin-bottom: 0;
+    position: relative;
+    overflow: hidden;
+    animation: fadeInUp 0.4s ease forwards;
+}
+
+.mod-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--border-radius-md);
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.5;
+    transition: opacity 0.3s;
+}
+
+.mod-item:hover {
+    transform: translateY(-4px) scale(1.005);
+    background: var(--bg-card-hover);
+    border-color: rgba(122, 162, 247, 0.4);
+    box-shadow: var(--shadow-md), var(--shadow-glow);
+    z-index: 5;
+}
+
+body[data-theme="light"] .mod-item:hover {
+    border-color: rgba(52, 152, 219, 0.4);
+}
+
+.mod-item:hover::before {
+    opacity: 1;
+}
+
+.mod-item.selected {
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.05), var(--bg-dark-2));
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 1px rgba(122, 162, 247, 0.3), var(--shadow-md);
+}
+
+.mod-item.has-conflict {
+    border-color: var(--accent-yellow);
+    background: linear-gradient(135deg, rgba(224, 175, 104, 0.05), var(--bg-dark-2));
+}
+
+.mod-item.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+    border: 2px dashed var(--accent-blue);
+    background: transparent;
+}
+
+.mod-name-column {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    overflow: hidden;
+}
+
+/* Toggle Icon */
+.toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 0.5rem;
+    color: var(--text-disabled);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body[data-theme="light"] .toggle-icon {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.toggle-icon:hover {
+    color: var(--text-primary);
+    background-color: var(--accent-blue);
+}
+
+.toggle-icon::before {
+    content: '\f078';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 1rem;
+    transition: transform 0.3s;
+}
+
+.toggle-icon.rotated {
+    transform: rotate(180deg);
+    background-color: var(--accent-blue);
+    color: #fff;
+}
+
+/* Enhanced Checkbox for visual distinction */
+.mod-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--text-secondary);
+    /* Lighter border default */
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    /* Darker inner background for contrast */
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body[data-theme="light"] .mod-checkbox {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(148, 163, 184, 0.5);
+}
+
+.mod-checkbox:hover {
+    border-color: var(--accent-blue);
+    background: rgba(122, 162, 247, 0.1);
+}
+
+body[data-theme="light"] .mod-checkbox:hover {
+    background: rgba(52, 152, 219, 0.1);
+    border-color: var(--accent-blue);
+}
+
+.mod-checkbox:checked {
+    background-color: var(--accent-blue);
+    border-color: var(--accent-blue);
+    transform: scale(1.1);
+}
+
+body[data-theme="light"] .mod-checkbox:checked {
+    background-color: var(--accent-blue);
+    border-color: var(--accent-blue);
+}
+
+.mod-checkbox:checked::after {
+    content: '\f00c';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: var(--bg-dark-1);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+body[data-theme="light"] .mod-checkbox:checked::after {
+    color: white;
+}
+
+.mod-name-text {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.mod-name-part2 {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    margin-right: 0.8rem;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.mod-priority-display {
+    font-size: 1rem;
+    background-color: rgba(224, 175, 104, 0.1);
+    color: var(--accent-yellow);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid rgba(224, 175, 104, 0.3);
+    margin-left: 1rem;
+    font-weight: 700;
+}
+
+.mod-tags-column {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding-right: 1rem;
+}
+
+.mod-tags-column .tag {
+    pointer-events: none;
+}
+
+.tag {
+    font-size: 1rem;
+    padding: 0.4rem 1.2rem;
+    border-radius: 20px;
+    background-color: var(--bg-input);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    white-space: nowrap;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.tag:hover {
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.mod-status-column {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Switch Style for Status */
+.mod-status {
+    font-size: 1.2rem;
+    padding: 0.6rem 1.5rem;
+    border-radius: 30px;
+    background-color: var(--bg-input);
+    color: var(--text-disabled);
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    /* Added border */
+}
+
+/* --- Added Group Conflict Style --- */
+.mod-status.group-conflict {
+    border-color: var(--accent-orange);
+    color: var(--accent-orange);
+}
+
+.mod-status.group-conflict:hover {
+    background: rgba(255, 158, 100, 0.2);
+    box-shadow: 0 0 10px rgba(255, 158, 100, 0.2);
+    border-color: var(--accent-orange);
+    color: var(--accent-orange);
+}
+
+/* -------------------------------- */
+
+.mod-status:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+body[data-theme="light"] .mod-status:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.mod-status.active {
+    background: linear-gradient(135deg, rgba(158, 206, 106, 0.2), rgba(158, 206, 106, 0.1));
+    color: var(--accent-green);
+    border-color: rgba(158, 206, 106, 0.4);
+    box-shadow: 0 0 10px rgba(158, 206, 106, 0.1);
+}
+
+.mod-status.active:hover {
+    background: linear-gradient(135deg, rgba(158, 206, 106, 0.3), rgba(158, 206, 106, 0.15));
+    box-shadow: 0 0 15px rgba(158, 206, 106, 0.2);
+}
+
+.mod-status.active i {
+    transform: scale(1.15);
+    /* Pop effect */
+    filter: drop-shadow(0 0 5px rgba(158, 206, 106, 0.6));
+    /* Glow effect */
+}
+
+.mod-status:active i {
+    transform: scale(0.9);
+}
+
+.mod-status i {
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease, filter 0.3s ease;
+}
+
+/* --- Sub Mod List & Items --- */
+.sub-mods-list {
+    grid-column: 1 / -1;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: var(--border-radius-sm);
+    margin-top: 1.5rem;
+    margin-bottom: -0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.sub-mod-item {
+    display: grid;
+    grid-template-columns: minmax(300px, 4fr) 3fr auto;
+    padding: 1rem 1.5rem;
+    padding-left: 2rem;
+    align-items: center;
+    border-radius: var(--border-radius-sm);
+    transition: background-color 0.2s;
+    position: relative;
+    margin-bottom: 2px;
+}
+
+.sub-mod-item:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+body[data-theme="light"] .sub-mod-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.sub-mod-item::before {
+    content: '';
+    position: absolute;
+    left: 0.8rem;
+    top: 50%;
+    width: 0.8rem;
+    height: 1px;
+    background-color: var(--text-disabled);
+    opacity: 0.5;
+}
+
+.sub-mod-name-column {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Make sure inner elements of component-wrapper don't interfere with drop targeting */
+.component-wrapper {
+    background: rgba(20, 21, 30, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    margin-bottom: 1rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+body.is-dragging .component-wrapper * {
+    pointer-events: none !important;
+}
+
+body[data-theme="light"] .component-wrapper {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.component-header {
+    background: linear-gradient(90deg, rgba(122, 162, 247, 0.15) 0%, transparent 100%);
+    padding: 1.2rem 2rem;
+    font-weight: 700;
+    color: var(--accent-blue);
+    font-size: 1.3rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.component-wrapper .mod-item {
+    margin: 4px;
+    width: calc(100% - 8px);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.2);
+    box-shadow: none;
+    transition: all 0.2s;
+}
+
+.component-wrapper .mod-item.selected {
+    border: 1px solid var(--accent-blue);
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.05), var(--bg-dark-2));
+    box-shadow: 0 0 0 1px rgba(122, 162, 247, 0.3), var(--shadow-md);
+}
+
+.component-wrapper .mod-item:hover {
+    background: var(--bg-card-hover);
+    z-index: 2;
+}
+

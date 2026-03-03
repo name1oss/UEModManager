@@ -1,0 +1,568 @@
+﻿/* ========================================= */
+/* Main Layout */
+/* ========================================= */
+.app-layout {
+    display: flex;
+    width: 100%;
+    height: calc(100vh - 32px);
+    overflow: hidden;
+}
+
+/* ========================================= */
+/* Sidebar (Refined) */
+/* ========================================= */
+.sidebar {
+    width: 29rem;
+    min-width: 29rem;
+    flex-shrink: 0;
+    /* Enhanced Glassmorphism & Depth */
+    background: var(--bg-glass-sidebar);
+    backdrop-filter: blur(16px) saturate(180%);
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
+    /* Deeper shadow */
+}
+
+body[data-theme="light"] .sidebar {
+    background: var(--bg-glass-sidebar);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 4px 0 20px rgba(100, 116, 139, 0.1);
+}
+
+
+
+/* Removed h2 styles as the text is removed */
+
+/* Old .sidebar-content-scroll removed, replaced by new structure */
+
+
+/* --- Sidebar Groups --- */
+/* --- Sidebar Groups --- */
+.sidebar-group {
+    /* Styles moved to .sidebar-card */
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-group-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-disabled);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sidebar-sub-separator {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    margin: 1.5rem 2rem;
+    opacity: 0.4;
+}
+
+/* Sidebar Hover - Subtle Glow */
+.sidebar:hover {
+    box-shadow: 4px 0 30px rgba(0, 0, 0, 0.4);
+}
+
+.op-count {
+    background-color: rgba(122, 162, 247, 0.1);
+    color: var(--accent-blue);
+    font-size: 0.9rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(122, 162, 247, 0.2);
+    flex-shrink: 0;
+}
+
+/* --- SIDEBAR BUTTONS OPTIMIZATION (Modernized) --- */
+/* --- SIDEBAR BUTTONS OPTIMIZATION (Modernized) --- */
+.sidebar-button {
+    width: 100%;
+    /* Subtle Gradient Background */
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    padding: 1.1rem 1.4rem;
+    border-radius: 12px;
+    /* Modern rounded corners */
+    cursor: pointer;
+    font-size: 1.3rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    /* Ensure left alignment */
+    gap: 1.4rem;
+    transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-align: left;
+    margin-bottom: 0.6rem;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+    white-space: nowrap;
+}
+
+/* Hover Effect: Glow + Lift */
+.sidebar-button:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateX(4px);
+    box-shadow: 0 0 15px rgba(122, 162, 247, 0.1);
+    /* Subtle generic glow */
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+}
+
+body[data-theme="light"] .sidebar-button:hover {
+    background: #f1f5f9;
+    border-color: rgba(148, 163, 184, 0.5);
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+}
+
+body[data-theme="light"] .sidebar-button:active {
+    background: #e2e8f0;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-button:active {
+    transform: translateX(2px) scale(0.99);
+    background: rgba(122, 162, 247, 0.1);
+}
+
+.sidebar-button i {
+    width: 2.2rem;
+    text-align: center;
+    font-size: 1.5rem;
+    color: var(--text-disabled);
+    transition: color 0.2s, transform 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+.sidebar-button:hover i {
+    transform: scale(1.15);
+    /* Slight icon pop */
+    opacity: 1;
+}
+
+.sidebar-button.hidden {
+    display: none;
+}
+
+/* --- Color Coded Buttons --- */
+
+/* 1. Edit Tags: Cyan */
+.sidebar-button.btn-color-tags {
+    border-left: 2px solid transparent;
+}
+
+.sidebar-button.btn-color-tags:hover {
+    border-left-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.sidebar-button.btn-color-tags i {
+    color: var(--accent-cyan);
+}
+
+.sidebar-button.btn-color-tags:hover i {
+    color: var(--accent-cyan);
+}
+
+/* 2. Sub Mod: Purple */
+.sidebar-button.btn-color-submod {
+    border-left: 2px solid transparent;
+}
+
+.sidebar-button.btn-color-submod:hover {
+    border-left-color: var(--accent-purple);
+    color: var(--accent-purple);
+}
+
+.sidebar-button.btn-color-submod i {
+    color: var(--accent-purple);
+}
+
+.sidebar-button.btn-color-submod:hover i {
+    color: var(--accent-purple);
+}
+
+/* 3. Add to Similar: Orange */
+.sidebar-button.btn-color-sim-add {
+    border-left: 2px solid transparent;
+}
+
+.sidebar-button.btn-color-sim-add:hover {
+    border-left-color: var(--accent-orange);
+    color: var(--accent-orange);
+}
+
+.sidebar-button.btn-color-sim-add i {
+    color: var(--accent-orange);
+}
+
+.sidebar-button.btn-color-sim-add:hover i {
+    color: var(--accent-orange);
+}
+
+/* 4. Create Group: Yellow */
+.sidebar-button.btn-color-sim-create {
+    border-left: 2px solid transparent;
+}
+
+.sidebar-button.btn-color-sim-create:hover {
+    border-left-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+.sidebar-button.btn-color-sim-create i {
+    color: var(--accent-yellow);
+}
+
+.sidebar-button.btn-color-sim-create:hover i {
+    color: var(--accent-yellow);
+}
+
+/* 5. Add Mod (Primary): Blue */
+.sidebar-button.primary-btn {
+    background: rgba(122, 162, 247, 0.1);
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    color: var(--accent-blue);
+    margin-bottom: 1.2rem;
+}
+
+.sidebar-button.primary-btn:hover {
+    background: rgba(122, 162, 247, 0.2);
+    border-color: var(--accent-blue);
+    color: #fff;
+}
+
+.sidebar-button.primary-btn i {
+    color: var(--accent-blue);
+}
+
+.sidebar-button.primary-btn:hover i {
+    color: #fff;
+}
+
+/* 6. Manage Similar: Orange/Yellow Mix */
+.sidebar-button.btn-color-manage-sim:hover {
+    border-left-color: var(--accent-orange);
+    color: var(--accent-orange);
+}
+
+.sidebar-button.btn-color-manage-sim i {
+    color: var(--accent-orange);
+}
+
+/* 7. Refresh: Green */
+.sidebar-button.btn-color-refresh:hover {
+    border-left-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.sidebar-button.btn-color-refresh i {
+    color: var(--accent-green);
+}
+
+/* 8. Settings: Grey/Blue */
+.sidebar-button.btn-color-settings:hover {
+    border-left-color: var(--text-secondary);
+    color: var(--text-primary);
+}
+
+.sidebar-button.btn-color-settings i {
+    color: var(--text-secondary);
+}
+
+/* 9. Folders: Yellow */
+.sidebar-button.btn-color-folder:hover {
+    border-left-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+.sidebar-button.btn-color-folder i {
+    color: var(--accent-yellow);
+}
+
+/* 10. Clothing: Pink/Red */
+.sidebar-button.btn-color-clothing:hover {
+    border-left-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+.sidebar-button.btn-color-clothing i {
+    color: var(--accent-red);
+}
+
+/* 11. Lookup: Magenta */
+.sidebar-button.btn-color-lookup:hover {
+    border-left-color: var(--accent-magenta);
+    color: var(--accent-magenta);
+}
+
+.sidebar-button.btn-color-lookup i {
+    color: var(--accent-magenta);
+}
+
+/* 13. Nexus Mods: Brand Orange */
+.sidebar-button.btn-color-nexus:hover {
+    border-left-color: #da8e35;
+    color: #da8e35;
+}
+
+.sidebar-button.btn-color-nexus i {
+    color: #da8e35;
+}
+
+/* 12. Launch Game (Flat) */
+.button-launch-game {
+    /* Premium "Call to Action" Style */
+    background: rgba(158, 206, 106, 0.1);
+    border: 1px solid rgba(158, 206, 106, 0.3);
+    color: var(--accent-green) !important;
+    justify-content: center;
+    font-weight: 800;
+    height: 60px;
+    /* More prominent */
+    font-size: 1.6rem;
+    letter-spacing: 1.5px;
+    border-radius: 16px;
+    margin-bottom: 0;
+    box-shadow: 0 4px 15px rgba(158, 206, 106, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.button-launch-game:hover {
+    background: rgba(158, 206, 106, 0.2);
+    border-color: var(--accent-green);
+    transform: translateY(-2px);
+    color: var(--accent-green) !important;
+    box-shadow: 0 8px 25px rgba(158, 206, 106, 0.25);
+    /* Stronger glow */
+}
+
+.button-launch-game i {
+    color: var(--accent-green) !important;
+}
+
+/* Light Theme Start Button */
+body[data-theme="light"] .button-launch-game {
+    /* Very light, near-white background (Mint Cream) for 'Light Color' requirement */
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    color: #15803d !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+body[data-theme="light"] .button-launch-game:hover {
+    /* Slightly darker/more saturated on hover */
+    background: #dcfce7;
+    border-color: #4ade80;
+    color: #14532d !important;
+    box-shadow: 0 10px 15px -3px rgba(22, 163, 74, 0.15), 0 4px 6px -2px rgba(22, 163, 74, 0.1);
+    transform: translateY(-2px);
+}
+
+body[data-theme="light"] .button-launch-game i {
+    color: #15803d !important;
+}
+
+/* === REVERTED GRID LAYOUT FOR MOD OPERATIONS === */
+/* Removed specific #modOperationsSection styles to inherit default sidebar-button list style */
+
+/* --- NEW SIDEBAR ARCHITECTURE --- */
+
+/* 1. Fixed Header Container */
+.sidebar-header-fixed {
+    flex-shrink: 0;
+    /* Fixed height area approx 220px to hold the max height content */
+    /* Adjust this min-height to fit the tallest view (Default or Ops) */
+    min-height: 23rem;
+    padding: 1.8rem 1.5rem 0 1.5rem;
+    position: relative;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    margin-bottom: 1rem;
+    overflow: hidden;
+    /* Hide non-active views */
+}
+
+/* Views inside the header */
+.sidebar-view {
+    position: absolute;
+    top: 1.8rem;
+    left: 1.5rem;
+    right: 1.5rem;
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-view.active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* Mod Operations specific card style */
+#sidebar-ops-view .sidebar-card {
+    background: rgba(122, 162, 247, 0.04);
+    /* Reduced opacity */
+    border: 1px dashed rgba(122, 162, 247, 0.2);
+    /* Changed to dashed to look like a dropzone/special section */
+    border-radius: 12px;
+    box-shadow: none;
+    /* Removed heavy shadow */
+    padding: 1.2rem;
+    /* Keep padding for special cards */
+}
+
+body[data-theme="light"] #sidebar-ops-view .sidebar-card {
+    background: rgba(14, 165, 233, 0.05);
+    border-color: rgba(14, 165, 233, 0.3);
+}
+
+/* 2. Scrollable Menu Area */
+.sidebar-menu-scroll {
+    flex-grow: 1;
+    overflow-y: overlay;
+    /* Standard scroll */
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0;
+}
+
+/* --- CARD STYLING --- */
+.sidebar-card {
+    padding: 0.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* Removed background, border, border-radius, box-shadow, backdrop-filter */
+}
+
+/* Ensure no double padding/margin for items inside cards */
+.sidebar-card .sidebar-group-title {
+    padding-left: 0.2rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    opacity: 0.8;
+}
+
+/* Mod Ops Specific Styles */
+#sidebar-ops-view .sidebar-button {
+    background: rgba(122, 162, 247, 0.08);
+    /* Distinct bg for ops */
+    border: 1px solid rgba(122, 162, 247, 0.1);
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.8rem;
+}
+
+#sidebar-ops-view .sidebar-button:hover {
+    background: rgba(122, 162, 247, 0.15);
+    border-color: var(--accent-blue);
+    transform: translateX(4px);
+}
+
+
+/* Sidebar Footer (Launch Game) */
+.sidebar-footer {
+    padding: 1.5rem;
+    background: rgba(20, 21, 30, 0.6);
+    /* Slightly darker bottom */
+    border-top: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+    flex-shrink: 0;
+}
+
+body[data-theme="light"] .sidebar-footer {
+    background: rgba(241, 245, 249, 0.85);
+    border-top-color: rgba(148, 163, 184, 0.2);
+}
+
+/* Dropdown styling updates */
+.dropdown-content {
+    display: none;
+    flex-direction: column;
+    padding: 0.6rem;
+    background: rgba(25, 27, 36, 0.85);
+    /* Slightly darker, distinct background */
+    backdrop-filter: blur(16px);
+    border-radius: 12px;
+    /* Smoother corner */
+    margin-top: 0.6rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 0, 0, 0.1);
+    /* Deeper shadow */
+    gap: 4px;
+    z-index: 1000;
+}
+
+.dropdown-content button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 0.8rem 1rem;
+    text-align: left;
+    cursor: pointer;
+    font-size: 1.15rem;
+    /* Better scale */
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    opacity: 0.85;
+    border-radius: 8px;
+    /* Highlighting gets a nice shape */
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    /* Better spacing between icon and text */
+}
+
+.dropdown-content button i {
+    width: 1.5rem;
+    font-size: 1.25rem;
+    text-align: center;
+    color: var(--text-disabled);
+    transition: color 0.2s;
+}
+
+.dropdown-content button:hover {
+    opacity: 1;
+    color: var(--text-primary);
+    background-color: rgba(122, 162, 247, 0.15);
+    /* Sleek highlight background */
+}
+
+.dropdown-content button:hover i {
+    color: var(--accent-blue);
+    /* Distinctive hover color for icon */
+}
+
+/* Add subtle divider */
+.dropdown-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 4px 6px;
+}
+

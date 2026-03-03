@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="app.page_title">UE Mod Manager</title>
+    <!-- Favicon: 统一使用 .ico -->
+    <link rel="icon" href="assets/icon.ico">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- SCRIPT FOR DYNAMIC UI SCALING -->
+    <script>
+        (function () {
+            function applyScaling() {
+                const baselineWidth = 1920;
+                const baseFontSize = 10;
+                const screenWidth = window.innerWidth;
+                let scaleFactor = screenWidth / baselineWidth;
+
+                // 限制缩放范围
+                if (scaleFactor < 0.85) scaleFactor = 0.85;
+                if (scaleFactor > 1.2) scaleFactor = 1.2;
+
+                const newSize = baseFontSize * scaleFactor;
+                document.documentElement.style.fontSize = newSize + 'px';
+            }
+            applyScaling();
+            window.addEventListener('resize', applyScaling);
+        })();
+    </script>
+    <!-- i18n: load utility first (synchronous), then inject locale script based on localStorage -->
+    <script src="js/i18n.js"></script>
+    <script>
+        // Load locale script synchronously before DOMContentLoaded
+        (function () {
+            var lang = localStorage.getItem('app_language') || 'zh-CN';
+            var supported = ['zh-CN', 'en', 'ja'];
+            if (!supported.includes(lang)) lang = 'zh-CN';
+            // Set html lang attribute
+            document.documentElement.lang = lang;
+            // Write script tag so locale loads before DOMContentLoaded
+            document.write('<scr' + 'ipt src="js/locales/' + lang + '.js"></scr' + 'ipt>');
+        })();
+    </script>
+    <script src="js/locales/extra.js"></script>
+    <script src="js/locales/ui-extra.js"></script>
+</head>
+
+<body data-theme="tokyo-night">
+    <!-- Custom Title Bar -->
+    <div id="title-bar">
+        <div id="title-drag-region"></div>
+        <div class="window-title">
+            <!-- 修复：将 icon.png 改为 icon.ico，确保与打包资源一致 -->
+            <img src="assets/icon.ico" alt="icon">
+            <span id="window-title-text" data-i18n="app.window_title_suffix">Mod Manager</span>
+        </div>
+        <div class="window-controls">
+            <button id="min-btn" class="control-btn" data-i18n-title="window.minimize" title="Minimize"><i class="fas fa-minus"></i></button>
+            <button id="max-btn" class="control-btn" data-i18n-title="window.max_restore" title="Maximize / Restore"><i class="far fa-square"></i></button>
+            <button id="close-btn" class="control-btn close-btn-window" data-i18n-title="window.close" title="Close"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <!-- Backgrounds -->
+    <div id="animated-background"></div>
+    <div id="fixed-background-layer"></div>
+
+    <!-- Global loading indicator -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="simple-spinner"></div>
+        <span class="loading-text" data-i18n="loading.processing">Processing...</span>
+    </div>
+
+    <!-- Toast notification container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- 新增：下载进度悬浮窗 -->
+    <div id="downloadProgressPopup" class="toast"
+        style="display: none; bottom: 8rem; border-left: 5px solid var(--accent-green); flex-direction: column; align-items: stretch; min-width: 300px; z-index: 20002;">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+            <i class="fas fa-download" style="color: var(--accent-green);"></i>
+            <span id="downloadFileNameProgress" data-i18n="download.progress.downloading"
+                style="font-weight: bold; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Downloading...</span>
+            <span id="downloadPercent" style="font-family: monospace;">0%</span>
+        </div>
+        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+            <div id="downloadProgressBar"
+                style="width: 0%; height: 100%; background: var(--accent-green); transition: width 0.2s;"></div>
+        </div>
+    </div>
+
+    <!-- Custom Context Menu -->
+    <div id="contextMenu" class="context-menu"></div>
+
+    <!-- Mod preview container -->
+    <div id="modPreviewContainer" class="mod-preview-container">
+        <div class="mod-preview-image-wrapper"></div>
+        <p id="modPreviewText" class="mod-preview-text" data-i18n="mod.preview.label">Preview</p>
+        <div class="preview-dots" id="previewDotsContainer"></div>
+    </div>
+
+    <!-- Main Layout Container -->
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <!-- 1. Fixed Header Area (Context Aware) -->
+            <div class="sidebar-header-fixed">
+                <!-- View A: DEFAULT (General Actions) -->
+                <div id="sidebar-default-view" class="sidebar-view active">
+                    <div class="sidebar-card">
+                        <div class="sidebar-group-title" data-i18n="sidebar.section.general">常规</div>
+                        <button id="addModBtn" class="sidebar-button primary-btn">
+                            <i class="fas fa-folder-plus"></i> <span data-i18n="sidebar.btn.add_mod">添加 Mod</span>
+                        </button>
+                        <button id="refreshModsBtn" class="sidebar-button btn-color-refresh">
+                            <i class="fas fa-sync-alt"></i> <span data-i18n="sidebar.btn.refresh">刷新列表</span>
+                        </button>
+                        <div id="globalOperationsSimilarModContainer">
+                            <button id="sidebarManageSimilarModsBtn" class="sidebar-button btn-color-manage-sim">
+                                <i class="fas fa-layer-group"></i> <span data-i18n="sidebar.btn.manage_similar">同类 Mod
+                                    管理</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View B: MOD OPERATIONS (Contextual) -->
+                <div id="sidebar-ops-view" class="sidebar-view">
+                    <div class="sidebar-card" style="border-left: 3px solid var(--accent-blue);">
+                        <div class="sidebar-group-title" style="color: var(--accent-blue);"><span
+                                data-i18n="sidebar.section.ops">Mod 操作</span> <span id="modOperationsCount"
+                                class="op-count">0</span></div>
+                        <button id="sidebarEditTagsBtn" class="sidebar-button btn-color-tags">
+                            <i class="fas fa-tags"></i> <span data-i18n="sidebar.btn.edit_tags">编辑标签</span>
+                        </button>
+                        <button id="sidebarAddSubModBtn" class="sidebar-button btn-color-submod hidden">
+                            <i class="fas fa-plus-square"></i> <span data-i18n="sidebar.btn.add_submod">添加子模块</span>
+                        </button>
+                        <button id="sidebarAddToSimilarModBtn" class="sidebar-button btn-color-sim-add hidden">
+                            <i class="fas fa-plus-circle"></i> <span
+                                data-i18n="sidebar.btn.add_to_similar">添加至同类组</span>
+                        </button>
+                        <button id="sidebarCreateSimilarModGroupBtn" class="sidebar-button btn-color-sim-create hidden">
+                            <i class="fas fa-layer-group"></i> <span data-i18n="sidebar.btn.create_similar">创建同类组</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Scrollable Menu Area -->
+            <div class="sidebar-menu-scroll">
+
+                <!-- Group: Tools -->
+                <div class="sidebar-card">
+                    <div class="sidebar-group-title" data-i18n="sidebar.section.tools">工具箱</div>
+                    <button class="sidebar-button btn-color-presets" onclick="openPresetsModal()">
+                        <i class="fas fa-save"></i> <span data-i18n="sidebar.btn.presets">预设方案</span>
+                    </button>
+                    <button id="openNexusBtn" class="sidebar-button btn-color-nexus">
+                        <i class="fas fa-globe"></i> <span data-i18n="sidebar.btn.nexus">Nexus Mods</span>
+                    </button>
+
+                    <button class="sidebar-button btn-color-clothing" onclick="openClothingImageModal()">
+                        <i class="fas fa-tshirt"></i> <span data-i18n="sidebar.btn.clothing">服装列表</span>
+                    </button>
+
+
+                    <div class="dropdown">
+                        <button id="openFoldersBtn" class="sidebar-button btn-color-folder"
+                            onclick="toggleFolderDropdown(event)">
+                            <i class="fas fa-folder"></i> <span data-i18n="sidebar.btn.open_folder">打开文件夹</span> <i
+                                class="fas fa-chevron-down ml-auto" style="font-size: 0.8em; margin-left: auto;"></i>
+                        </button>
+                        <div class="dropdown-content">
+                            <button onclick="openAllModsFolder()"><i class="fas fa-folder"></i> <span
+                                    data-i18n="sidebar.folder.all_mods">所有 Mod 文件夹</span></button>
+                            <button onclick="openActiveModsFolder()"><i class="fas fa-folder-open"></i> <span
+                                    data-i18n="sidebar.folder.active_mods">游戏 Mod 文件夹</span></button>
+                            <div class="dropdown-divider"></div>
+                            <button onclick="openNexusDownloadsFolder()"><i class="fas fa-cloud-download-alt"></i> <span
+                                    data-i18n="sidebar.folder.nexus_downloads">Nexus 下载文件夹</span></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spacer -->
+                <div style="flex-grow: 1;"></div>
+
+                <!-- Group: System -->
+                <div class="sidebar-card">
+                    <div class="sidebar-sub-separator"></div>
+                    <button id="switchGameBtn" class="sidebar-button btn-color-settings" style="margin-bottom: 0.5rem;">
+                        <i class="fas fa-exchange-alt"></i> <span data-i18n="sidebar.btn.switch_game">切换游戏</span>
+                    </button>
+                    <button id="settingsBtn" class="sidebar-button btn-color-settings">
+                        <i class="fas fa-cog"></i> <span data-i18n="sidebar.btn.settings">设置</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Fixed Footer -->
+            <div class="sidebar-footer">
+                <button id="launchGameBtn" class="sidebar-button button-launch-game">
+                    <i class="fas fa-gamepad"></i> <span data-i18n="sidebar.btn.launch">启动游戏</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="top-controls-panel">
+                <div class="top-controls-row">
+                    <div class="search-bar-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" data-i18n-placeholder="topbar.search_placeholder"
+                            placeholder="搜索 Mod 名称、标签...">
+                        <button id="returnAllModsButton" class="icon-button" onclick="clearSearch()" data-i18n-title="topbar.search_clear" title="Clear Search"
+                            style="position:absolute; right:1.5rem; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-disabled); cursor:pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="header-filters">
+                        <div class="filter-group">
+                            <div class="filter-buttons">
+                                <button class="tag-filter-btn activation-filter-btn active" data-activation-filter="all"
+                                    onclick="filterModsByActivation('all')" data-i18n="topbar.filter.all">全部</button>
+                                <button class="tag-filter-btn activation-filter-btn" data-activation-filter="active"
+                                    onclick="filterModsByActivation('active')"
+                                    data-i18n="topbar.filter.active">已启用</button>
+                                <button class="tag-filter-btn activation-filter-btn" data-activation-filter="inactive"
+                                    onclick="filterModsByActivation('inactive')"
+                                    data-i18n="topbar.filter.inactive">未启用</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="top-controls-row bottom-row">
+                    <div class="tags-filter-container" id="tag-filter-group-container">
+                        <div class="filter-buttons tag-filter-group">
+                            <button class="tag-filter-btn tag-only-filter-btn active" data-tag=""
+                                onclick="filterModsByTag('')" data-i18n="topbar.filter.all_tags">全部标签</button>
+                        </div>
+                    </div>
+
+                    <div class="sort-container">
+                        <select id="sortSelect" class="sort-dropdown">
+                            <option value="default" selected data-i18n="topbar.sort.custom">自定义</option>
+                            <option value="name" data-i18n="topbar.sort.name_az">名称 (A-Z)</option>
+                            <option value="name-reverse" data-i18n="topbar.sort.name_za">名称 (Z-A)</option>
+                            <option value="tags" data-i18n="topbar.sort.by_tag">按标签</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mod-list-header">
+                <div class="header-col header-mod-name">
+                    <span data-i18n="topbar.header.name">Mod 名称 / 优先级</span>
+                </div>
+                <div class="header-col header-tags" data-i18n="topbar.header.tags">标签</div>
+                <div class="header-col header-actions" style="justify-content: flex-end; display: flex;">
+                    <!-- Sort UI moved to top-controls-panel -->
+                </div>
+            </div>
+
+            <div class="mod-list-scroll-area">
+                <div class="mod-list"></div>
+
+
+            </div>
+        </main>
+    </div>
+
+    <!-- === MODALS === -->
+
+    <!-- 新增：下载文件选择模态框 -->
+    <div id="downloadSelectionModal" class="modal" style="z-index: 2100;">
+        <div class="modal-content" style="width: 600px; max-width: 90vw; display: flex; flex-direction: column;">
+            <span class="close-button" onclick="closeModal('downloadSelectionModal')">&times;</span>
+            <h2 data-i18n="download.modal.title">Install Options</h2>
+            <p><span data-i18n="download.modal.downloaded">Downloaded:</span> <strong id="downloadedFileName"
+                    style="color: var(--accent-blue);"></strong></p>
+            <p style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 1rem;"
+                data-i18n="download.modal.folder_hint">Choose folders to install (.pak folders without subfolders only):
+            </p>
+
+            <div id="downloadFileTree" class="file-tree-container">
+                <!-- JS will populate this -->
+            </div>
+
+            <div style="margin-top: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="installAsNewModGroup" class="mod-checkbox"
+                        style="width: 16px; height: 16px;">
+                    <span data-i18n="download.modal.install_new_mod">Install as a new Mod (do not merge into an existing same-name folder)</span>
+                </label>
+                <div id="newModNameInputContainer" style="display: none; margin-top: 0.5rem;">
+                    <input type="text" id="installModName" data-i18n-placeholder="download.modal.mod_name_placeholder" placeholder="Enter Mod name (defaults to file name)..." style="width: 100%;">
+                </div>
+            </div>
+
+            <div class="form-actions"
+                style="display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem;">
+                <button class="neon-button secondary" onclick="openDownloadLocation()" style="margin-right: auto;">
+                    <i class="fas fa-folder-open"></i> <span data-i18n="download.modal.open_location">Open File Location</span>
+                </button>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="neon-button secondary" onclick="closeModal('downloadSelectionModal')" data-i18n="btn.cancel">Cancel</button>
+                    <button class="neon-button" onclick="confirmInstallDownload()" data-i18n="download.modal.install">Install</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div id="renameModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('renameModal')">&times;</span>
+            <h2 data-i18n="modal.rename.title">重命名 Mod</h2>
+
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label for="newModDisplayNameInput"
+                    style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--accent-blue);"
+                    data-i18n="modal.rename.display_label">显示名称 (自定义)</label>
+                <input type="text" id="newModDisplayNameInput" data-i18n-placeholder="modal.rename.display_placeholder"
+                    placeholder="仅在列表显示的名称..." style="width: 100%; font-size: 1.1em;">
+                <small style="color: var(--text-disabled);" data-i18n="modal.rename.display_hint">仅更改在 Mod
+                    管理器中显示的名称，不影响文件。</small>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="newModFileNameInput"
+                    style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);"
+                    data-i18n="modal.rename.file_label">文件名称 (物理文件名)</label>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span id="priorityPrefixHint"
+                        style="font-family: monospace; color: var(--text-disabled); display: none;">9_</span>
+                    <input type="text" id="newModFileNameInput" data-i18n-placeholder="modal.rename.file_placeholder" placeholder="Physical folder name..."
+                        style="flex-grow: 1; font-family: monospace;">
+                </div>
+                <small style="color: var(--text-disabled);"
+                    data-i18n="modal.rename.file_hint">修改实际文件夹名称。通常不需要修改。</small>
+            </div>
+
+            <input type="hidden" id="oldModNameDisplay">
+            <input type="hidden" id="originalModFileName">
+            <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+                <button class="neon-button" onclick="renameMod()"><i class="fas fa-check"></i> <span
+                        data-i18n="btn.confirm">确认</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addSubModModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('addSubModModal')">&times;</span>
+            <h2 data-i18n="modal.submod.title">Add Sub-mod</h2>
+            <p style="margin-bottom: 1rem;"><span data-i18n="modal.submod.parent_prefix">For</span> <strong id="currentParentModName"
+                    style="color: var(--accent-blue);"></strong> <span data-i18n="modal.submod.parent_suffix">add sub-mod(s) (multi-select)</span></p>
+            <div class="search-bar-wrapper" style="margin-bottom: 1rem;">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="subModSearchInput" data-i18n-placeholder="modal.submod.search_placeholder" placeholder="Search available modules..." oninput="filterAvailableSubMods()">
+            </div>
+            <div id="availableSubModsList" class="add-mods-list picker-list-container">
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="neon-button" onclick="confirmAddSubModRelation()"><i class="fas fa-plus"></i>
+                    <span data-i18n="modal.submod.confirm_add">Confirm Add</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="batchTaggingModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('batchTaggingModal')">&times;</span>
+            <h2 data-i18n="modal.tags.title">Edit Tags</h2>
+            <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.8rem;">
+                <span class="info-badge blue"><i class="fas fa-layer-group"></i> <span data-i18n="modal.tags.selected">Selected:</span> <strong
+                        id="selectedModCountBatch">0</strong></span>
+                <span style="font-size: 0.9em; color: var(--text-secondary);" data-i18n="modal.tags.for_mods">Batch manage tags for selected Mods</span>
+            </div>
+
+            <!-- New Tag Edit Layout (Tag Cloud) -->
+            <div id="tagEditContainer">
+                <div class="tag-edit-header">
+                    <input type="text" id="tagSearchInput" class="tag-search-box" data-i18n-placeholder="modal.tags.search_placeholder" placeholder="Search tags or type a new tag then press Enter..."
+                        autocomplete="off">
+                </div>
+                <div class="tag-cloud-container custom-scrollbar">
+                    <div id="tagCloudGrid" class="tag-cloud-grid">
+                        <!-- Tags will be rendered here by JS -->
+                    </div>
+                </div>
+                <div
+                    style="font-size: 0.9em; color: var(--text-disabled); margin-top: 0.5rem; display: flex; gap: 1.5rem;">
+                    <span style="display: flex; align-items: center; gap: 0.5rem;"><span
+                            style="width: 10px; height: 10px; background: rgba(122, 162, 247, 0.4); border: 1px solid var(--accent-blue); border-radius: 50%;"></span>
+                        <span data-i18n="modal.tags.state.all">Selected (All)</span></span>
+                    <span style="display: flex; align-items: center; gap: 0.5rem;"><span
+                            style="width: 10px; height: 10px; background: repeating-linear-gradient(45deg, rgba(122, 162, 247, 0.2), rgba(122, 162, 247, 0.2) 2px, transparent 2px, transparent 4px); border: 1px dashed var(--accent-blue); border-radius: 50%;"></span>
+                        <span data-i18n="modal.tags.state.mixed">Partially Selected (Mixed)</span></span>
+                    <span style="display: flex; align-items: center; gap: 0.5rem;"><span
+                            style="width: 10px; height: 10px; border: 1px solid var(--text-disabled); border-radius: 50%;"></span>
+                        <span data-i18n="modal.tags.state.none">Not Selected</span></span>
+                </div>
+            </div>
+
+            <div
+                style="display: flex; justify-content: flex-end; margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                <button class="neon-button secondary" onclick="closeModal('batchTaggingModal')"
+                    style="margin-right: 1rem;" data-i18n="btn.cancel">Cancel</button>
+                <button class="neon-button" onclick="applyBatchTags()"><i class="fas fa-check"></i> <span data-i18n="btn.apply">Apply Changes</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="similarModManagementModal" class="modal">
+        <div class="modal-content wide">
+            <span class="close-button" onclick="closeModal('similarModManagementModal')">&times;</span>
+            <h2 data-i18n="modal.similar.title">管理同类 Mod 组</h2>
+
+            <div class="batch-tag-layout">
+
+                <!-- Card 1: Create New Group -->
+                <div class="tag-section-card" id="createSimilarGroupSection">
+                    <h3 class="card-title"><i class="fas fa-plus-circle"></i> <span
+                            data-i18n="modal.similar.create.title">创建新的同类 Mod 组</span></h3>
+                    <div class="info-badge blue" style="margin-bottom: 1rem;">
+                        <i class="fas fa-info-circle"></i>
+                        <span><span data-i18n="modal.similar.create.selected_prefix">Set the currently selected</span> <strong id="selectedModsForSimilarGroup">0</strong> <span data-i18n="modal.similar.create.selected_suffix">Mods as one new group.</span></span>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9em;"
+                        data-i18n="modal.similar.create.desc">
+                        同类 Mod 组内的 Mod 一次只能启用一个 (互斥)。
+                    </p>
+                    <div style="display: flex; gap: 0.8rem; align-items: stretch;">
+                        <div class="form-group" style="flex-grow: 1; margin-bottom: 0;">
+                        <input type="text" id="newSimilarGroupNameInput"
+                                data-i18n-placeholder="modal.similar.search_placeholder"
+                                placeholder="Enter group name (e.g. initial outfit replacements)..." style="width: 100%; height: 100%;">
+                        </div>
+                        <button class="neon-button" onclick="createSimilarModGroup()"
+                            style="padding: 0 2rem; white-space: nowrap;">
+                            <i class="fas fa-plus"></i> <span data-i18n="btn.create">创建</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 2: Existing Groups -->
+                <div class="tag-section-card">
+                    <h3 class="card-title"><i class="fas fa-list-ul"></i> <span
+                            data-i18n="modal.similar.existing.title">现有的同类 Mod 组</span></h3>
+                    <div class="search-bar-wrapper" style="margin-bottom: 1rem;">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="similarGroupSearchInput"
+                            data-i18n-placeholder="modal.similar.search_placeholder" placeholder="Search group name..."
+                            oninput="debounceFilterSimilarModGroups()">
+                    </div>
+                    <div id="existingSimilarGroupsContainer" class="custom-scrollbar"
+                        style="max-height: 300px; overflow-y: auto; padding: 0.5rem 0.5rem 0.5rem 0.5rem;">
+                        <p class="placeholder-text" data-i18n="group.management.loading">Loading...</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="addToSimilarModGroupModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('addToSimilarModGroupModal')">&times;</span>
+            <h2 data-i18n="modal.similar.add_to.title">Add to Similar Mod Group</h2>
+            <p style="margin-bottom: 1rem;"><span data-i18n="modal.similar.add_to.selected_prefix">Add</span> <strong id="selectedModsCountAddToSimilar">0</strong> <span data-i18n="modal.similar.add_to.selected_suffix">selected Mods into an existing similar Mod group.</span></p>
+            <div class="search-bar-wrapper" style="margin-bottom: 1rem;">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="similarGroupSearchInputModal" data-i18n-placeholder="modal.similar.add_to.search_placeholder" placeholder="Search similar Mod groups..."
+                    oninput="filterSimilarGroupsForAdding()">
+            </div>
+            <div id="existingSimilarGroupsList" class="add-mods-list picker-list-container">
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="neon-button" onclick="addModsToSimilarGroup()"><i class="fas fa-plus"></i>
+                    <span data-i18n="modal.similar.add_to.confirm">Add to Selected Group</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addModsToGroupModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('addModsToGroupModal')">&times;</span>
+            <h2><span data-i18n="modal.similar.add_mods.title">Add to Similar Mod Group:</span> <strong id="addModsToGroupName" style="color: var(--accent-cyan);"></strong></h2>
+            <div class="search-bar-wrapper" style="margin-bottom: 1rem;">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="addModsToGroupSearchInput" data-i18n-placeholder="modal.similar.add_mods.search_placeholder" placeholder="Search Mods to add..."
+                    oninput="filterModsForAddingToGroup()">
+            </div>
+            <div id="addModsToGroupList" class="add-mods-list picker-list-container">
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="neon-button" onclick="confirmAddModsToGroup()"><i class="fas fa-plus"></i> <span data-i18n="modal.similar.add_mods.confirm">Confirm Add</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="renameSimilarGroupModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('renameSimilarGroupModal')">&times;</span>
+            <h2 data-i18n="modal.similar.rename.title">Rename Similar Mod Group</h2>
+            <p style="margin-bottom: 1rem;"><span data-i18n="modal.similar.rename.old_name">Old Name:</span> <strong id="oldSimilarGroupNameDisplay"></strong></p>
+            <label for="newSimilarGroupNameInputModal" style="display: block; margin-bottom: 0.5rem;" data-i18n="modal.similar.rename.new_name">New Name:</label>
+            <input type="text" id="newSimilarGroupNameInputModal" autofocus>
+            <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+                <button class="neon-button" onclick="renameSimilarModGroup()"><i class="fas fa-check"></i> <span data-i18n="btn.confirm">Confirm</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modPreviewModal" class="modal">
+        <div class="modal-content wide" style="text-align: center;">
+            <span class="close-button" onclick="closeModal('modPreviewModal')">&times;</span>
+            <h2 id="modPreviewTitle" data-i18n="modal.mod_preview.title">Mod Preview</h2>
+            <div id="loadingSpinner" class="simple-spinner" style="margin: 2rem auto; display: none;"></div>
+            <div id="modPreviewImagesContainer" class="mod-preview-images-container"></div>
+            <div class="carousel-controls"
+                style="margin-top: 1.5rem; display: flex; justify-content: center; align-items: center; gap: 1.5rem;">
+                <button id="prevImageBtn" class="neon-button secondary" style="padding: 0.5rem 1rem;"><i
+                        class="fas fa-chevron-left"></i></button>
+                <span id="imageCounter" class="image-counter" style="font-family: monospace;"></span>
+                <button id="nextImageBtn" class="neon-button secondary" style="padding: 0.5rem 1rem;"><i
+                        class="fas fa-chevron-right"></i></button>
+            </div>
+            <p id="noPreviewImageMessage" class="placeholder-text" style="display: none; padding: 2rem;" data-i18n="modal.mod_preview.empty">This Mod has no preview images.
+            </p>
+            <p id="previewErrorMessage" class="placeholder-text"
+                style="display: none; padding: 2rem; color: var(--accent-red);" data-i18n="preview.load_failed">Failed to load preview images.</p>
+        </div>
+    </div>
+
+    <div id="clothingImageModal" class="modal">
+        <div class="modal-content wide">
+            <span class="close-button" onclick="closeModal('clothingImageModal')">&times;</span>
+            <h2 data-i18n="modal.clothing.title">Clothing List</h2>
+            <div class="search-bar-wrapper" style="margin-bottom: 1rem;">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="clothingSearchInput" data-i18n-placeholder="modal.clothing.search_placeholder" placeholder="Search clothing name..." oninput="filterClothingImages()">
+            </div>
+            <div id="clothingImageGrid" class="clothing-image-grid"></div>
+            <p id="noClothingImageMessage" class="placeholder-text"
+                style="display: none; padding: 2rem; text-align: center;" data-i18n="modal.clothing.empty">No clothing images found.</p>
+            <p id="clothingImageErrorMessage"
+                style="display: none; padding: 2rem; text-align: center; color: var(--accent-red);" data-i18n="modal.clothing.load_failed">Failed to load clothing images.</p>
+        </div>
+    </div>
+
+    <!-- Mod Presets Modal -->
+    <div id="presetsModal" class="modal">
+        <div class="modal-content wide-preset"> <!-- Added class wide-preset for custom width -->
+            <span class="close-button" onclick="closeModal('presetsModal')">&times;</span>
+            <div class="preset-modal-layout">
+                <!-- Left Panel: List -->
+                <div class="preset-list-panel">
+                    <div class="preset-header-row">
+                        <h2><i class="fas fa-save"></i> <span data-i18n="modal.preset.title">Presets</span></h2>
+                        <button class="neon-button small" onclick="openSavePresetUI()">
+                            <i class="fas fa-plus"></i> <span data-i18n="modal.preset.new">New</span>
+                        </button>
+                    </div>
+
+                    <div id="presetsListContainer" class="custom-scrollbar preset-list-container">
+                        <!-- Presets will be loaded here via JS -->
+                    </div>
+                </div>
+
+                <!-- Right Panel: Details / Edit / Create -->
+                <div class="preset-detail-panel">
+
+                    <!-- View: Empty State -->
+                    <div id="presetEmptyState" class="preset-detail-view" style="display: flex;">
+                        <div class="placeholder-text-center">
+                            <i class="fas fa-layer-group"
+                                style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                            <p data-i18n-html="modal.preset.empty_hint">Select a preset on the left to view details<br>or click "New" to save the current Mod state</p>
+                        </div>
+                    </div>
+
+                    <!-- View: Create New -->
+                    <div id="savePresetUI" class="preset-detail-view" style="display: none;">
+                        <h3><i class="fas fa-plus-circle"></i> <span data-i18n="modal.preset.save.title">Save New Preset</span></h3>
+                        <p class="description-text" data-i18n="modal.preset.save.desc">Save the currently enabled Mods (including sub-mods) as a snapshot.</p>
+
+                        <div class="form-group">
+                            <label data-i18n="modal.preset.save.name_label">Preset Name</label>
+                            <input type="text" id="newPresetName" data-i18n-placeholder="modal.preset.save.name_placeholder" placeholder="e.g. Casual, Daily...">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="modal.preset.save.color_label">Tag Color</label>
+                            <div class="color-picker-wrapper" style="margin-bottom: 0.5rem;">
+                                <input type="color" id="newPresetColor" value="#7aa2f7">
+                                <span class="color-value">#7aa2f7</span>
+                            </div>
+                            <div class="color-presets-row">
+                                <button class="color-dot" style="background-color: #7aa2f7"
+                                    onclick="setPresetColor('newPresetColor', '#7aa2f7')" data-i18n-title="preset.color.default_blue" title="Default Blue"></button>
+                                <button class="color-dot" style="background-color: #f7768e"
+                                    onclick="setPresetColor('newPresetColor', '#f7768e')" data-i18n-title="preset.color.cherry_red" title="Cherry Red"></button>
+                                <button class="color-dot" style="background-color: #9ece6a"
+                                    onclick="setPresetColor('newPresetColor', '#9ece6a')" data-i18n-title="preset.color.grass_green" title="Grass Green"></button>
+                                <button class="color-dot" style="background-color: #e0af68"
+                                    onclick="setPresetColor('newPresetColor', '#e0af68')" data-i18n-title="preset.color.bright_yellow" title="Bright Yellow"></button>
+                                <button class="color-dot" style="background-color: #bb9af7"
+                                    onclick="setPresetColor('newPresetColor', '#bb9af7')" data-i18n-title="preset.color.light_purple" title="Light Purple"></button>
+                                <button class="color-dot" style="background-color: #a9b1d6"
+                                    onclick="setPresetColor('newPresetColor', '#a9b1d6')" data-i18n-title="preset.color.light_gray" title="Light Gray"></button>
+                            </div>
+                        </div>
+
+                        <div class="preset-quick-stats">
+                            <div class="stat-item"><span id="newPresetModCount">0</span> <span data-i18n="preset.stats.mods">Mods</span></div>
+                            <div class="stat-item"><span id="newPresetSubCount">0</span> <span data-i18n="preset.stats.subs">Subs</span></div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="neon-button secondary" onclick="cancelPresetAction()" data-i18n="btn.cancel">Cancel</button>
+                            <button class="neon-button" onclick="savePreset()" data-i18n="modal.preset.save.btn">Save Preset</button>
+                        </div>
+                    </div>
+
+                    <!-- View: Edit Existing -->
+                    <div id="editPresetUI" class="preset-detail-view" style="display: none;">
+                        <h3><i class="fas fa-edit"></i> <span data-i18n="modal.preset.edit.title">Edit Preset</span></h3>
+                        <input type="hidden" id="editPresetId">
+
+                        <div class="form-group">
+                            <label data-i18n="modal.preset.save.name_label">Preset Name</label>
+                            <input type="text" id="editPresetName">
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="modal.preset.save.color_label">Tag Color</label>
+                            <div class="color-picker-wrapper" style="margin-bottom: 0.5rem;">
+                                <input type="color" id="editPresetColor">
+                                <span class="color-value" id="editPresetColorValue"></span>
+                            </div>
+                            <div class="color-presets-row">
+                                <button class="color-dot" style="background-color: #7aa2f7"
+                                    onclick="setPresetColor('editPresetColor', '#7aa2f7')" data-i18n-title="preset.color.default_blue" title="Default Blue"></button>
+                                <button class="color-dot" style="background-color: #f7768e"
+                                    onclick="setPresetColor('editPresetColor', '#f7768e')" data-i18n-title="preset.color.cherry_red" title="Cherry Red"></button>
+                                <button class="color-dot" style="background-color: #9ece6a"
+                                    onclick="setPresetColor('editPresetColor', '#9ece6a')" data-i18n-title="preset.color.grass_green" title="Grass Green"></button>
+                                <button class="color-dot" style="background-color: #e0af68"
+                                    onclick="setPresetColor('editPresetColor', '#e0af68')" data-i18n-title="preset.color.bright_yellow" title="Bright Yellow"></button>
+                                <button class="color-dot" style="background-color: #bb9af7"
+                                    onclick="setPresetColor('editPresetColor', '#bb9af7')" data-i18n-title="preset.color.light_purple" title="Light Purple"></button>
+                                <button class="color-dot" style="background-color: #a9b1d6"
+                                    onclick="setPresetColor('editPresetColor', '#a9b1d6')" data-i18n-title="preset.color.light_gray" title="Light Gray"></button>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="neon-button secondary" onclick="cancelPresetAction()" data-i18n="btn.close">Close</button>
+                            <button class="neon-button" onclick="updatePreset()" data-i18n="modal.preset.edit.btn">Update Save</button>
+                        </div>
+                    </div>
+
+                    <!-- View: Details Info -->
+                    <div id="presetDetailView" class="preset-detail-view" style="display: none;">
+                        <div class="detail-header">
+                            <h3 id="detailPresetName"></h3>
+                            <div class="detail-actions">
+                                <button class="icon-btn-small" onclick="switchToEditPreset()" data-i18n-title="preset.detail.edit_info" title="Edit Info"><i
+                                        class="fas fa-pen"></i></button>
+                                <button class="icon-btn-small red" onclick="deleteCurrentPreset()" data-i18n-title="preset.detail.delete_preset" title="Delete Preset"><i
+                                        class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="detail-meta">
+                            <span class="detail-date" id="detailPresetDate"></span>
+                            <span class="detail-badge" id="detailPresetCount"></span>
+                        </div>
+
+                        <div class="detail-mod-list-wrapper">
+                            <h4 data-i18n="modal.preset.detail.included">Included Mods</h4>
+                            <div id="detailModList" class="custom-scrollbar detail-mod-list">
+                                <!-- List populated by JS -->
+                            </div>
+                        </div>
+
+                        <div class="form-actions bottom">
+                            <button class="neon-button full-width" onclick="applyCurrentPreset()">
+                                <i class="fas fa-play"></i> <span data-i18n="modal.preset.apply">Apply This Preset</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content wide">
+            <span class="close-button" onclick="closeModal('settingsModal')">&times;</span>
+            <h2 data-i18n="settings.title">设置</h2>
+            <div class="settings-tabs"
+                style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color);">
+                <button class="settings-tab-button active" onclick="openSettingsTab(event, 'paths')"
+                    data-i18n="settings.tab.paths">路径设置</button>
+                <button class="settings-tab-button" onclick="openSettingsTab(event, 'appearance')"
+                    data-i18n="settings.tab.appearance">外观设置</button>
+                <button class="settings-tab-button" onclick="openSettingsTab(event, 'interaction')"
+                    data-i18n="settings.tab.interaction">交互设置</button>
+            </div>
+
+            <!-- Settings Tabs Wrapper for Grid Overlap -->
+            <div class="settings-tab-container-wrapper">
+                <!-- Paths Tab -->
+                <div id="paths" class="settings-tab-content active">
+                    <form id="settingsForm" onsubmit="return false;">
+
+                        <div class="settings-card">
+                            <h3><i class="fas fa-folder"></i> <span data-i18n="settings.paths.mod_storage.title">Mod
+                                    存储路径</span></h3>
+                            <div class="form-group">
+                                <label for="mods_dir" style="margin-bottom: 0.8rem; display: block;"
+                                    data-i18n="settings.paths.mod_folder.label">Mod 文件夹 (存放所有未激活的 Mod):</label>
+                                <div style="display: flex; gap: 1rem;">
+                                    <input type="text" id="mods_dir" name="mods_dir" required style="margin-bottom: 0;">
+                                    <button class="neon-button secondary"
+                                        onclick="selectDirectory('mods_dir', t('settings.paths.mod_storage.title'))"
+                                        style="white-space: nowrap;">
+                                        <i class="fas fa-folder-open"></i> <span data-i18n="btn.select">选择</span>
+                                    </button>
+                                </div>
+                                <small style="color: var(--text-disabled); display: block; margin-top: 0.5rem;"
+                                    data-i18n="settings.paths.mod_folder.hint">这是您存放所有 Mod 文件（包括主模块和子模块）的原始位置。</small>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h3><i class="fas fa-gamepad"></i> <span data-i18n="settings.paths.game.title">游戏路径</span>
+                            </h3>
+                            <div class="form-group">
+                                <label for="game_path" id="gamePathLabel"
+                                    style="margin-bottom: 0.8rem; display: block;" data-i18n="settings.paths.game.root_label">Game Root Directory:</label>
+                                <div style="display: flex; gap: 1rem;">
+                                    <input type="text" id="game_path" name="game_path"
+                                        data-i18n-placeholder="settings.paths.game.placeholder" placeholder="e.g. ...\StellarBlade" required style="margin-bottom: 0;">
+                                    <button class="neon-button secondary" id="autoDetectPathBtn"
+                                        onclick="autoDetectGamePath()" style="white-space: nowrap;">
+                                        <i class="fas fa-magic"></i> <span data-i18n="btn.auto">自动</span>
+                                    </button>
+                                    <button class="neon-button secondary"
+                                        onclick="selectDirectory('game_path', t('settings.paths.game.title'))"
+                                        style="white-space: nowrap;">
+                                        <i class="fas fa-folder-open"></i> <span data-i18n="btn.select">选择</span>
+                                    </button>
+                                </div>
+                                <small data-i18n="settings.paths.game.hint"
+                                    style="color: var(--text-disabled); display: block; margin-top: 0.5rem;">程序将从此路径自动推断启动文件和
+                                    Mod 文件夹 (~mods)。</small>
+                            </div>
+                        </div>
+
+                        <div class="settings-card">
+                            <h3><i class="fas fa-download"></i> <span data-i18n="settings.paths.nexus.title">Nexus Mods
+                                    下载设置</span></h3>
+                            <div class="form-group">
+                                <label for="nexus_download_dir" style="margin-bottom: 0.8rem; display: block;"
+                                    data-i18n="settings.paths.nexus.label">下载缓存文件夹:</label>
+                                <div style="display: flex; gap: 1rem;">
+                                    <input type="text" id="nexus_download_dir" name="nexus_download_dir"
+                                        data-i18n-placeholder="settings.paths.nexus.placeholder" placeholder="默认为临时文件夹"
+                                        style="margin-bottom: 0;">
+                                    <button class="neon-button secondary"
+                                        onclick="selectDirectory('nexus_download_dir', t('settings.paths.nexus.title'))"
+                                        style="white-space: nowrap;">
+                                        <i class="fas fa-folder-open"></i> <span data-i18n="btn.select">选择</span>
+                                    </button>
+                                </div>
+                                <small style="color: var(--text-disabled); display: block; margin-top: 0.5rem;"
+                                    data-i18n="settings.paths.nexus.hint">设置从 Nexus Mods
+                                    下载文件时的临时存储位置。留空则使用系统默认临时文件夹。</small>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+                <!-- Appearance Tab (Merged Theme & Background) -->
+                <div id="appearance" class="settings-tab-content">
+                    <div class="appearance-options">
+
+                        <!-- Theme Settings Card -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-palette"></i> <span
+                                    data-i18n="settings.appearance.theme.title">界面主题</span></h3>
+                            <div class="theme-selector-container" style="justify-content: space-around;">
+                                <div class="theme-option" data-theme="tokyo-night" data-i18n-title="theme.tokyo_night" title="Tokyo Night (Default)">
+                                    <div class="theme-circle tokyo-night"></div>
+                                    <span data-i18n="theme.label.default">Default</span>
+                                </div>
+                                <div class="theme-option" data-theme="light" data-i18n-title="theme.light" title="Bright (Light)">
+                                    <div class="theme-circle light"></div>
+                                    <span data-i18n="theme.label.light">Light</span>
+                                </div>
+                                <div class="theme-option" data-theme="dark" data-i18n-title="theme.dark" title="Dark">
+                                    <div class="theme-circle dark"></div>
+                                    <span data-i18n="theme.label.dark">Dark</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Background Settings Card -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-image"></i> <span
+                                    data-i18n="settings.appearance.background.title">背景设置</span></h3>
+
+                            <div class="form-group" style="margin-bottom: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.8rem;"
+                                    data-i18n="settings.appearance.background.ops">操作:</label>
+                                <div class="background-controls" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                    <input type="file" id="backgroundImageUploadInput" style="display: none;"
+                                        accept="image/*" onchange="handleNewBackgroundImageSelect(event)">
+                                    <button class="neon-button secondary"
+                                        onclick="document.getElementById('backgroundImageUploadInput').click()">
+                                        <i class="fas fa-upload"></i> <span
+                                            data-i18n="settings.appearance.background.add">添加新背景</span>
+                                    </button>
+                                    <button class="neon-button secondary"
+                                        onclick="selectDirectory('bg_images_dir', t('settings.appearance.background.title'))">
+                                        <i class="fas fa-folder-open"></i> <span
+                                            data-i18n="settings.appearance.background.change_folder">更改文件夹</span>
+                                    </button>
+                                </div>
+                                <!-- Hidden input for directory selection logic compatibility -->
+                                <input type="text" id="bg_images_dir" name="bg_images_dir" style="display: none;">
+                            </div>
+
+                            <div class="background-controls-grid">
+                                <div class="slider-container">
+                                    <div class="slider-header">
+                                        <span data-i18n="settings.appearance.background.opacity">背景透明度</span>
+                                        <span id="opacityValue" style="color: var(--accent-blue);">0%</span>
+                                    </div>
+                                    <input type="range" id="backgroundOpacity" min="0" max="100" value="0"
+                                        class="slider">
+                                </div>
+                                <div class="slider-container">
+                                    <div class="slider-header">
+                                        <span data-i18n="settings.appearance.background.blur">背景模糊度</span>
+                                        <span id="blurValue" style="color: var(--accent-blue);">0px</span>
+                                    </div>
+                                    <input type="range" id="backgroundBlur" min="0" max="20" value="0" class="slider">
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="display: block; margin-bottom: 0.5rem;"
+                                    data-i18n="settings.appearance.background.select">选择背景图片:</label>
+                                <div id="backgroundImageThumbnails" class="image-thumbnails-container">
+                                    <p class="placeholder-text" data-i18n="settings.appearance.background.loading">Loading images...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Interaction Tab -->
+                <div id="interaction" class="settings-tab-content">
+                    <div class="settings-card">
+                        <h3><i class="fas fa-mouse-pointer"></i> <span
+                                data-i18n="settings.interaction.preview.title">预览交互设置</span></h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9em;"
+                            data-i18n="settings.interaction.preview.desc">
+                            自定义光标悬停时的预览行为。
+                        </p>
+
+                        <div class="form-group">
+                            <label for="previewDelayInput" style="display: block; margin-bottom: 0.8rem;">
+                                <span data-i18n="settings.interaction.preview.delay">悬停显示延迟 (毫秒)</span>
+                                <span style="float: right; color: var(--accent-blue);"
+                                    id="previewDelayValue">600ms</span>
+                            </label>
+                            <input type="range" id="previewDelayInput" min="100" max="2000" step="100" value="600"
+                                class="slider"
+                                oninput="document.getElementById('previewDelayValue').textContent = this.value + 'ms'">
+                            <small style="color: var(--text-disabled); display: block; margin-top: 0.5rem;"
+                                data-i18n="settings.interaction.preview.delay.hint">
+                                光标在 Mod 上停留多久后显示预览图。设得太短可能会频繁误触发。
+                            </small>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 2rem;">
+                            <label for="previewIntervalInput" style="display: block; margin-bottom: 0.8rem;">
+                                <span data-i18n="settings.interaction.preview.interval">预览图切换间隔 (毫秒)</span>
+                                <span style="float: right; color: var(--accent-blue);"
+                                    id="previewIntervalValue">2000ms</span>
+                            </label>
+                            <input type="range" id="previewIntervalInput" min="500" max="5000" step="100" value="2000"
+                                class="slider"
+                                oninput="document.getElementById('previewIntervalValue').textContent = this.value + 'ms'">
+                            <small style="color: var(--text-disabled); display: block; margin-top: 0.5rem;"
+                                data-i18n="settings.interaction.preview.interval.hint">
+                                当 Mod 有多张预览图时，自动切换下一张图片的间隔时间。
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <h3><i class="fas fa-arrows-alt-v"></i> <span
+                                data-i18n="settings.interaction.scroll.title">滚动交互设置</span></h3>
+                        <div class="form-group">
+                            <label for="scrollTriggerDistanceInput" style="display: block; margin-bottom: 0.8rem;">
+                                <span data-i18n="settings.interaction.scroll.trigger">边缘滚动触发距离 (px)</span>
+                                <span style="float: right; color: var(--accent-blue);"
+                                    id="scrollTriggerDistanceValue">100px</span>
+                            </label>
+                            <input type="range" id="scrollTriggerDistanceInput" min="50" max="300" step="10" value="100"
+                                class="slider"
+                                oninput="document.getElementById('scrollTriggerDistanceValue').textContent = this.value + 'px'">
+                            <small style="color: var(--text-disabled); display: block; margin-top: 0.5rem;"
+                                data-i18n="settings.interaction.scroll.hint">
+                                在拖拽 Mod 排序时，当鼠标距离列表边缘小于此距离时会自动开始滚动。距离越宽，越容易触发滚动。
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Language Switcher Card -->
+                    <div class="settings-card">
+                        <h3><i class="fas fa-language"></i> <span data-i18n="settings.language.title">语言 /
+                                Language</span></h3>
+                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9em;"
+                            data-i18n="settings.language.desc">选择界面显示语言（切换后立即生效）。</p>
+                        <div class="lang-switcher" id="langSwitcher">
+                            <button class="lang-btn" data-lang="zh-CN" onclick="setLanguage('zh-CN')">
+                                <span class="lang-flag">🇨🇳</span>
+                                <span class="lang-name" data-i18n="settings.language.option.zh">简体中文</span>
+                            </button>
+                            <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">
+                                <span class="lang-flag">🇺🇸</span>
+                                <span class="lang-name" data-i18n="settings.language.option.en">English</span>
+                            </button>
+                            <button class="lang-btn" data-lang="ja" onclick="setLanguage('ja')">
+                                <span class="lang-flag">🇯🇵</span>
+                                <span class="lang-name" data-i18n="settings.language.option.ja">日本語</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- End of settings-tab-container-wrapper -->
+        </div>
+    </div>
+
+    <!-- 新增：应用内浏览器模态框 -->
+    <div id="webBrowserModal" class="modal">
+        <div class="modal-content wide"
+            style="height: 90vh; padding: 0; display: flex; flex-direction: column; overflow: hidden; max-width: 95vw;">
+            <div
+                style="padding: 1rem 2rem; background: var(--bg-glass-heavy); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <h2
+                        style="margin: 0; font-size: 1.6rem; background: none; -webkit-text-fill-color: var(--text-primary);">
+                        <i class="fas fa-globe" style="color: #da8e35;"></i> <span data-i18n="sidebar.btn.nexus">Nexus Mods</span>
+                    </h2>
+                </div>
+                <div style="display: flex; gap: 1.5rem; align-items: center;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="neon-button secondary" onclick="document.getElementById('nexusWebview').goBack()"
+                            style="padding: 0.5rem 1rem;" data-i18n-title="browser.back" title="Back"><i class="fas fa-arrow-left"></i></button>
+                        <button class="neon-button secondary" onclick="document.getElementById('nexusWebview').reload()"
+                            style="padding: 0.5rem 1rem;" data-i18n-title="browser.refresh" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <span class="close-button" onclick="closeModal('webBrowserModal')"
+                        style="position: static; width: 32px; height: 32px; font-size: 2.5rem; line-height: 32px;">&times;</span>
+                </div>
+            </div>
+            <div style="flex: 1; background: #1a1b26; position: relative;">
+                <!-- 使用 webview 标签以支持外部网站内嵌 (需 main.js 开启 webviewTag: true) -->
+                <webview id="nexusWebview" src="about:blank" style="width: 100%; height: 100%; display:flex;"
+                    allowpopups></webview>
+                <!-- 加载指示器（可选，需要配合JS逻辑隐藏） -->
+                <div id="webviewLoading"
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; background: var(--bg-dark-1); z-index: -1;">
+                    <div class="simple-spinner"></div>
+                </div>
+
+                <!-- 下载进度悬浮窗（在 webview 上层） -->
+                <div id="downloadProgressPopupNexus"
+                    style="display:none; position:absolute; bottom:20px; right:20px; background:var(--bg-glass-heavy); border:1px solid var(--border-color); border-radius:12px; padding:20px; min-width:300px; box-shadow:var(--shadow-lg); z-index:1000; backdrop-filter:blur(10px);">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <i class="fas fa-download" style="color:var(--accent-blue); font-size:1.5rem;"></i>
+                        <div style="flex:1;">
+                            <div style="font-weight:600; color:var(--text-primary); margin-bottom:4px;" data-i18n="download.progress.downloading">Downloading</div>
+                            <div id="downloadFileNameProgressNexus"
+                                style="font-size:0.9em; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:250px;">
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        style="background:var(--bg-dark-3); height:8px; border-radius:4px; overflow:hidden; margin-bottom:8px;">
+                        <div id="downloadProgressBarNexus"
+                            style="height:100%; background:linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); width:0%; transition:width 0.3s;">
+                        </div>
+                    </div>
+                    <div id="downloadPercentNexus"
+                        style="text-align:center; color:var(--accent-blue); font-weight:600; font-size:1.1rem;">0%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('messageModal')">&times;</span>
+            <h2 id="messageModalTitle"></h2>
+            <p id="messageModalContent" style="margin-bottom: 2rem;"></p>
+            <div style="display: flex; justify-content: flex-end;">
+                <button class="neon-button" onclick="closeModal('messageModal')"><i class="fas fa-check"></i>
+                    <span data-i18n="btn.confirm">Confirm</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('confirmModal')">&times;</span>
+            <h2 id="confirmModalTitle" data-i18n="confirm.modal.title">Confirm Action</h2>
+            <p id="confirmModalContent" style="margin-bottom: 2rem; color: var(--text-primary);"></p>
+            <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button class="neon-button secondary" id="confirmModalCancelBtn"><i class="fas fa-times"></i>
+                    <span data-i18n="confirm.modal.cancel">Cancel</span></button>
+                <button class="neon-button red" id="confirmModalConfirmBtn"><i class="fas fa-check"></i> <span data-i18n="confirm.modal.confirm">Confirm</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="fileConflictModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('fileConflictModal')">&times;</span>
+            <h2 id="fileConflictModalTitle" style="color: var(--accent-yellow);"><i
+                    class="fas fa-exclamation-triangle"></i> <span data-i18n="modal.fileconflict.title">File Conflict</span></h2>
+            <div id="fileConflictModalContent"
+                style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: var(--border-radius-sm);">
+            </div>
+            <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button class="neon-button secondary" id="fileConflictModalConfirmBtn"
+                    onclick="closeModal('fileConflictModal')"><i class="fas fa-check"></i> <span data-i18n="btn.ok">OK</span></button>
+                <button class="neon-button hidden" id="fileConflictModalForceActivateBtn"
+                    style="background-color: var(--accent-orange); color: white;"><i
+                        class="fas fa-exclamation-circle"></i> <span data-i18n="btn.force_activate">Force Activate</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editPreviewImageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('editPreviewImageModal')">&times;</span>
+            <h2><span data-i18n="modal.preview_edit.title">Edit Preview Images</span>: <strong id="modNameForPreviewEdit" style="color: var(--accent-blue);"></strong></h2>
+
+            <div id="previewImageGrid" class="preview-image-grid"></div>
+            <p id="noExistingPreviews" class="placeholder-text"
+                style="display: none; text-align: center; padding: 1rem;" data-i18n="preview.none_existing">This Mod currently has no preview images.</p>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label style="display: block; margin-bottom: 0.8rem; font-weight: 500;" data-i18n="preview.add_new">Add New Preview Image:</label>
+
+                <div id="previewImageDropZone" class="preview-upload-area"
+                    onclick="document.getElementById('previewImageUploadInput').click()">
+                    <i class="fas fa-cloud-upload-alt"
+                        style="font-size: 2rem; color: var(--accent-blue); margin-bottom: 0.5rem;"></i>
+                    <p style="margin-bottom: 0.5rem; color: var(--text-primary);" data-i18n="preview.upload.hint">Click to select or drag an image here</p>
+                    <small style="color: var(--text-disabled); display: block;" data-i18n="preview.upload.supported">Supported: JPG, PNG, WebP, GIF, BMP,
+                        DDS</small>
+                    <input type="file" id="previewImageUploadInput" accept="image/*" style="display: none;"
+                        onchange="handleNewPreviewImageSelect(event)">
+                </div>
+
+                <div id="uploadPreviewActions"
+                    style="display: none; margin-top: 1rem; align-items: center; justify-content: space-between; background: var(--bg-card); padding: 0.8rem; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                        <i class="fas fa-image" style="color: var(--accent-green);"></i>
+                        <span id="selectedFileName" style="color: var(--text-primary); font-weight: 500;"></span>
+                    </div>
+                    <button class="neon-button small" id="uploadPreviewBtn" onclick="uploadPreviewImage()">
+                        <i class="fas fa-upload"></i> <span data-i18n="preview.upload.confirm">Upload</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to top button (Visible by default in HTML, hidden by JS) -->
+    <button id="backToTopBtn" data-i18n-title="btn.back_to_top" title="Back to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Load order is critical: -->
+    <!-- 1. Base classes and configurations -->
+    <script src="js/game-config.js"></script>
+    <script src="js/ui-manager.js"></script>
+
+    <!-- 2. Core functionality (must load before core.js) -->
+    <script src="js/i18n.js"></script>
+    <script src="js/undo-manager.js"></script>
+    <script src="js/presets.js"></script>
+    <script src="js/mod-manager.js"></script>
+    <script src="js/ui-modals.js"></script>
+    <script src="js/ui-interactions.js"></script>
+    <script src="js/ui-preview-drag-and-drop.js"></script>
+
+    <!-- 3. Main initialization (loads last, sets up event listeners) -->
+    <script src="js/core.js"></script>
+
+    <!-- 修复：补充下拉菜单的控制逻辑 -->
+    <script>
+        function toggleFolderDropdown(event) {
+            event.stopPropagation();
+            const btn = event.currentTarget;
+            const dropdown = btn.nextElementSibling;
+            if (dropdown) {
+                const isVisible = dropdown.style.display === 'flex';
+                dropdown.style.display = isVisible ? 'none' : 'flex';
+
+                // Add click listener to document to close it
+                if (!isVisible) {
+                    const closeDropdown = () => {
+                        dropdown.style.display = 'none';
+                        document.removeEventListener('click', closeDropdown);
+                    };
+                    // Delay adding listener to avoid immediate trigger
+                    setTimeout(() => {
+                        document.addEventListener('click', closeDropdown);
+                    }, 0);
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

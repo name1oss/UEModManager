@@ -1,0 +1,314 @@
+﻿/* ========================================= */
+/* Modals (Enhanced) */
+/* ========================================= */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    animation: fadeIn 0.25s forwards;
+}
+
+.modal-content {
+    background: var(--bg-glass-heavy);
+    border: 1px solid var(--border-color);
+    padding: 3.5rem;
+    border-radius: var(--border-radius-xl);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 550px;
+    color: var(--text-primary);
+    position: relative;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-content.wide {
+    max-width: 1400px;
+    width: 95%;
+}
+
+.modal h2 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(90deg, var(--text-primary), var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.close-button {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    width: 36px;
+    height: 36px;
+    background: var(--bg-input);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 1.8rem;
+    cursor: pointer;
+    line-height: 1;
+    color: var(--text-secondary);
+}
+
+.close-button:hover {
+    background: var(--accent-red);
+    color: white;
+    transform: rotate(90deg);
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+/* ========================================= */
+/* Neon Buttons (Enhanced) */
+/* ========================================= */
+.neon-button {
+    background: var(--accent-blue);
+    color: #1a1b26;
+    border: none;
+    padding: 1.2rem 2.8rem;
+    font-size: 1.4rem;
+    font-weight: 800;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: var(--transition-medium);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    box-shadow: 0 4px 15px rgba(122, 162, 247, 0.3);
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+body[data-theme="light"] .neon-button {
+    color: white;
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.neon-button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: 0.5s;
+}
+
+.neon-button:hover::after {
+    left: 100%;
+}
+
+.neon-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(122, 162, 247, 0.5);
+}
+
+.neon-button.secondary {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    box-shadow: none;
+}
+
+.neon-button.secondary:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+body[data-theme="light"] .neon-button.secondary:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+}
+
+body[data-theme="light"] .neon-button.secondary {
+    color: var(--text-secondary);
+}
+
+.neon-button.red {
+    background: var(--accent-red);
+    color: white;
+    box-shadow: 0 4px 15px rgba(247, 118, 142, 0.3);
+}
+
+.neon-button.red:hover {
+    box-shadow: 0 8px 25px rgba(247, 118, 142, 0.5);
+}
+
+/* ========================================= */
+/* Context Menu */
+/* ========================================= */
+.context-menu {
+    position: fixed;
+    z-index: 9999;
+    display: none;
+    background-color: var(--bg-glass-heavy);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 0, 0, 0.2);
+    padding: 0.6rem;
+    min-width: 240px;
+    animation: scaleIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backdrop-filter: blur(16px);
+}
+
+.context-menu-separator {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    margin: 0.5rem 0;
+    width: 100%;
+}
+
+.context-menu-item {
+    padding: 0.7rem 1rem;
+    color: var(--text-secondary);
+    border-radius: 6px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex;
+    align-items: center;
+    position: relative;
+    margin-bottom: 2px;
+}
+
+.context-menu-item i {
+    margin-right: 1.2rem;
+    width: 1.6rem;
+    text-align: center;
+    color: var(--accent-blue);
+    opacity: 0.8;
+    transition: all 0.2s;
+}
+
+.context-menu-item:hover {
+    background-color: rgba(122, 162, 247, 0.15);
+    color: var(--text-primary);
+    transform: translateX(4px);
+}
+
+.context-menu-item:hover i {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+body[data-theme="light"] .context-menu-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.context-menu-item.danger:hover {
+    background-color: rgba(247, 118, 142, 0.15);
+    color: var(--accent-red);
+}
+
+.context-menu-item.danger:hover i {
+    color: var(--accent-red);
+}
+
+/* --- Submenu Styles (Hover-based) --- */
+.context-menu-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: -5px;
+    margin-left: 12px;
+    background-color: var(--bg-glass-heavy);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 6px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+    min-width: 160px;
+    backdrop-filter: blur(16px);
+    z-index: 10001;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.context-menu-item.has-submenu:hover .context-menu-submenu {
+    display: grid;
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Invisible bridge to prevent closing when moving mouse to submenu */
+.context-menu-item.has-submenu::after {
+    content: '\f0da';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9rem;
+    opacity: 0.6;
+    transition: transform 0.2s;
+}
+
+.context-menu-item.has-submenu:hover::after {
+    transform: translateY(-50%) translateX(3px);
+    opacity: 1;
+}
+
+.context-menu-item.has-submenu::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -20px;
+    width: 20px;
+    height: 100%;
+    background: transparent;
+}
+
+.submenu-item {
+    text-align: center;
+    padding: 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.2s;
+}
+
+.submenu-item:hover {
+    background-color: var(--accent-blue);
+    color: var(--bg-dark-1);
+    transform: scale(1.1);
+}
+
+.submenu-item.active {
+    background-color: rgba(122, 162, 247, 0.2);
+    color: var(--accent-blue);
+    border: 1px solid rgba(122, 162, 247, 0.3);
+}
+
+
+/* ========================================= */
+/* Settings Tabs - CSS Grid Overlap for Uniform Height */
+/* ========================================= */

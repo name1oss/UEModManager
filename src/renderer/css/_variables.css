@@ -1,0 +1,171 @@
+﻿:root {
+    font-size: 10px;
+
+    /* --- DARK THEME VARIABLES (Default - Deep Space) --- */
+    /* Deep Matte Backgrounds */
+    --bg-dark-1: #0f1115;
+    /* Almost Black */
+    --bg-dark-2: #16181d;
+    /* Dark Gunmetal */
+    --bg-dark-3: #1c1f26;
+
+    /* Glass Effect - Smoked */
+    --bg-glass: rgba(22, 24, 29, 0.85);
+    --bg-glass-heavy: #16181d;
+    --bg-glass-sidebar: rgba(18, 20, 24, 0.95);
+
+    /* Card Styling */
+    --bg-card: rgba(30, 34, 42, 0.7);
+    --bg-card-hover: rgba(40, 44, 52, 0.9);
+    --bg-input: rgba(255, 255, 255, 0.06);
+
+    /* Borders - Subtle */
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-color-hover: rgba(255, 255, 255, 0.15);
+    --border-color-light: rgba(255, 255, 255, 0.04);
+
+    /* Text */
+    --text-primary: #eceff4;
+    --text-secondary: #949eb3;
+    --text-disabled: #4c566a;
+    --text-highlight: #e0af68;
+    /* Carried over from Tokyo Night */
+
+    --font-family: 'Noto Sans SC', 'Segoe UI', 'Roboto', sans-serif;
+
+    --border-radius-sm: 8px;
+    /* Increased slightly */
+    --border-radius-md: 12px;
+    --border-radius-lg: 18px;
+    --border-radius-xl: 24px;
+
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-medium: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* --- Glow & Shadows --- */
+    --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
+    --shadow-glow: none;
+
+    /* Neon Accents */
+    --accent-blue: #5e81ac;
+    --accent-cyan: #88c0d0;
+    --accent-green: #a3be8c;
+    --accent-yellow: #ebcb8b;
+    --accent-orange: #ff9e64;
+    /* Carried over from Tokyo Night */
+    --accent-red: #bf616a;
+    --accent-purple: #b48ead;
+    --accent-magenta: #d08770;
+
+    /* Button Backgrounds for Distinction */
+    --btn-bg-default: rgba(255, 255, 255, 0.03);
+    --btn-bg-hover: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Light Theme Override (Premium Frost) --- */
+/* --- Light Theme Override (Premium Frost) --- */
+body[data-theme="light"] {
+    /* Cleaner Backgrounds - Slightly darken main BG for contrast with cards */
+    --bg-dark-1: #e2e8f0;
+    /* Slate 200 - reduced brightness from #f8fafc */
+    --bg-dark-2: #ffffff;
+    /* White */
+    --bg-dark-3: #f1f5f9;
+    /* Slate 100 */
+
+    /* Glass Effect - More Frosted */
+    --bg-glass: rgba(255, 255, 255, 0.75);
+    --bg-glass-heavy: rgba(255, 255, 255, 0.95);
+    --bg-glass-sidebar: rgba(241, 245, 249, 0.9);
+
+    /* Card Styling */
+    --bg-card: #ffffff;
+    /* Pure white for pop */
+    --bg-card-hover: #ffffff;
+    --bg-input: rgba(241, 245, 249, 0.8);
+
+    /* Borders & Shadows - Crisp */
+    --border-color: rgba(148, 163, 184, 0.3);
+    /* Slightly stronger border */
+    --border-color-hover: rgba(14, 165, 233, 0.6);
+    --border-color-light: rgba(148, 163, 184, 0.15);
+
+    /* Text - Crisp & Readable */
+    --text-primary: #0f172a;
+    /* Slate 900 - Darker for readability */
+    --text-secondary: #475569;
+    /* Slate 600 */
+    --text-disabled: #94a3b8;
+    --text-highlight: #d97706;
+
+    /* Shadows - Cool Toned */
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 15px rgba(14, 165, 233, 0.25);
+
+    /* Vibrant Accents */
+    --accent-blue: #0ea5e9;
+    --accent-cyan: #06b6d4;
+    --accent-green: #10b981;
+    --accent-yellow: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-purple: #8b5cf6;
+    --accent-magenta: #d946ef;
+
+    --btn-bg-default: rgba(15, 23, 42, 0.05);
+    --btn-bg-hover: rgba(15, 23, 42, 0.1);
+}
+
+/* --- Tokyo Night Theme Override (Previous Default) --- */
+body[data-theme="tokyo-night"] {
+    --bg-dark-1: #1a1b26;
+    /* Main Background */
+    --bg-dark-2: #24283b;
+    /* Card/Sidebar Background */
+    --bg-dark-3: #16161e;
+    /* Darker Elements */
+
+    /* --- Modern Glass Effect --- */
+    --bg-glass: rgba(26, 27, 38, 0.6);
+    --bg-glass-heavy: rgba(26, 27, 38, 0.95);
+    --bg-glass-sidebar: rgba(20, 21, 30, 0.85);
+    --bg-card: rgba(36, 40, 59, 0.7);
+    /* Mod Card Background */
+    --bg-card-hover: rgba(41, 46, 66, 0.95);
+    --bg-input: rgba(0, 0, 0, 0.3);
+    /* Slightly darker for better contrast */
+    --backdrop-filter: blur(12px) saturate(180%);
+
+    --border-color: rgba(122, 162, 247, 0.2);
+    --border-color-hover: rgba(122, 162, 247, 0.6);
+    --border-color-light: rgba(255, 255, 255, 0.08);
+    /* Tuned down for subtlety */
+
+    --text-primary: #c0caf5;
+    --text-secondary: #9aa5ce;
+    --text-disabled: #565f89;
+    --text-highlight: #e0af68;
+
+    /* --- Glow & Shadows --- */
+    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 15px rgba(122, 162, 247, 0.15);
+
+    /* Accent Colors */
+    --accent-blue: #7aa2f7;
+    --accent-cyan: #7dcfff;
+    --accent-green: #9ece6a;
+    --accent-yellow: #e0af68;
+    --accent-orange: #ff9e64;
+    --accent-red: #f7768e;
+    --accent-magenta: #bb9af7;
+    --accent-purple: #9d7cd8;
+
+    /* Button Backgrounds for Distinction */
+    --btn-bg-default: rgba(255, 255, 255, 0.03);
+    --btn-bg-hover: rgba(255, 255, 255, 0.08);
+}
