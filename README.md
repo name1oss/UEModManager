@@ -124,8 +124,3 @@ npm run dist
   - 手动在设置中填写游戏根目录并保存。
 - 打包后资源缺失
   - 检查 `package.json -> build.files` 配置与目录结构是否匹配。
-
-## 许可证
-
-MIT
-
