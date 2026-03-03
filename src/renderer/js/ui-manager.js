@@ -50,11 +50,25 @@ class UIManager {
         this.elements.set('launchButton', {
             selector: '#launchGameBtn',
             updateFn: (el, config) => {
-                if (el && config.uiConfig && config.uiConfig.launchButtonText) {
-                    const icon = el.querySelector('i');
-                    const iconHtml = icon ? icon.outerHTML : '<i class="fas fa-gamepad"></i>';
-                    el.innerHTML = `${iconHtml} <span>${config.uiConfig.launchButtonText}</span>`;
+                if (!el) return;
+
+                const icon = el.querySelector('i');
+                const iconHtml = icon ? icon.outerHTML : '<i class="fas fa-gamepad"></i>';
+                const translatedDefault = (typeof window.t === 'function')
+                    ? window.t('sidebar.btn.launch')
+                    : 'Launch Game';
+
+                let launchText = translatedDefault;
+                if (config && config.uiConfig) {
+                    const launchKey = config.uiConfig.launchButtonTextKey || config.uiConfig.launchButtonI18nKey;
+                    if (launchKey && typeof window.t === 'function') {
+                        launchText = window.t(launchKey);
+                    } else if (!translatedDefault || translatedDefault === 'sidebar.btn.launch') {
+                        launchText = config.uiConfig.launchButtonText || translatedDefault;
+                    }
                 }
+
+                el.innerHTML = `${iconHtml} <span>${launchText}</span>`;
             }
         });
 

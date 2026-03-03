@@ -302,6 +302,28 @@
             box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
         }
 
+        .add-game-btn {
+            border: none;
+            height: 38px;
+            padding: 0 1.1rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(122, 162, 247, 0.95) 0%, rgba(157, 124, 216, 0.95) 100%);
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 8px 20px rgba(122, 162, 247, 0.25);
+        }
+
+        .add-game-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(122, 162, 247, 0.35);
+        }
+
         /* --- Games Grid Area --- */
         .games-scroll-wrapper {
             flex: 1;
@@ -857,6 +879,11 @@
                             <i class="fas fa-list"></i>
                         </button>
                     </div>
+
+                    <button class="add-game-btn" onclick="openAddModal()">
+                        <i class="fas fa-plus"></i>
+                        <span data-i18n="game_selector.add.button">添加游戏</span>
+                    </button>
                 </div>
             </div>
 
@@ -901,7 +928,53 @@
             </div>
         </div>
 
+        <div id="addGameModal" class="modal">
+            <div class="modal-content">
+                <h2 data-i18n="game_selector.add.title">添加游戏</h2>
+
+                <div class="form-group">
+                    <label data-i18n="game_selector.add.name_label">游戏名称</label>
+                    <input type="text" id="addGameName" data-i18n-placeholder="game_selector.add.name_placeholder"
+                        placeholder="例如: Black Myth: Wukong">
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="game_selector.add.desc_label">描述 / 别名</label>
+                    <input type="text" id="addGameDesc" data-i18n-placeholder="game_selector.add.desc_placeholder"
+                        placeholder="可选描述">
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="game_selector.add.id_label">游戏 ID（可选）</label>
+                    <input type="text" id="addGameId" data-i18n-placeholder="game_selector.add.id_placeholder"
+                        placeholder="例如: BlackMythWukong">
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="game_selector.add.exe_label">可执行文件名</label>
+                    <input type="text" id="addGameExecutable" data-i18n-placeholder="game_selector.add.exe_placeholder"
+                        placeholder="例如: b1.exe">
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="game_selector.add.cover_label">封面图片（可选）</label>
+                    <div class="image-preview" id="addGameImagePreview"
+                        onclick="triggerImageSelect('addGameImagePath', 'addGameImagePreview')">
+                        <span style="color:rgba(255,255,255,0.3); font-weight: 500;"
+                            data-i18n="game_selector.add.cover_select">点击选择图片</span>
+                    </div>
+                    <input type="text" id="addGameImagePath" style="display:none;">
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeAddModal()" data-i18n="btn.cancel">取消</button>
+                    <button class="btn-confirm" onclick="saveNewGame()" data-i18n="btn.add">添加</button>
+                </div>
+            </div>
+        </div>
+
         <script src="js/game-selector.js"></script>
     </body>
 
 </html>
+

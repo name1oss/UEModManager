@@ -290,23 +290,39 @@ function initDB() {
 
 // --- 辅助函数 ---
 
-function getSettings() {
-    let id = 1;
-    if (activeGameId === 'KCD2') id = 2;
-    if (activeGameId === 'RomancingSaGa2') id = 3;
+function getSettingsIdForGame(gameId) {
+    const fallbackId = 1;
+    if (!gameId) return fallbackId;
 
-    let row = db.prepare('SELECT * FROM settings WHERE id = ?').get(id);
+    try {
+        const games = getGamesData();
+        const game = games.find(g => g.id === gameId);
+        const settingsId = Number(game?.settings_id);
+        if (Number.isInteger(settingsId) && settingsId > 0) {
+            return settingsId;
+        }
+    } catch (e) {
+        console.error('Failed to resolve settings_id for game:', gameId, e);
+    }
 
-    // Lazy initialization for new game settings
+    return fallbackId;
+}
+
+function ensureSettingsRow(settingsId) {
+    let row = db.prepare('SELECT * FROM settings WHERE id = ?').get(settingsId);
     if (!row) {
         db.prepare(`
             INSERT INTO settings (id, mods_dir, game_path, background_images_dir, background_image_name, background_opacity, background_blur, theme, color_preset, foreground_transparency, preview_delay, preview_interval, scroll_trigger_distance, nexus_download_dir)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(id, '', '', DEFAULT_BG_DIR, '', 1.0, 0.0, 'dark', 'default', 1.0, 600, 2000, 100, '');
-        row = db.prepare('SELECT * FROM settings WHERE id = ?').get(id);
+        `).run(settingsId, '', '', DEFAULT_BG_DIR, '', 1.0, 0.0, 'dark', 'default', 1.0, 600, 2000, 100, '');
+        row = db.prepare('SELECT * FROM settings WHERE id = ?').get(settingsId);
     }
+    return row;
+}
 
-    let settings = { ...row };
+function getSettings() {
+    const settingsId = getSettingsIdForGame(activeGameId);
+    let settings = { ...ensureSettingsRow(settingsId) };
 
     // 动态计算 active_mods_dir 和 game_exe_path
     if (settings.game_path && fs.existsSync(settings.game_path)) {
@@ -324,13 +340,13 @@ function getSettings() {
         // Or better yet, check if 'SB' folder exists, if not check others?
         // User asked "Management page roughly same".
 
-        if (id === 3) { // Romancing SaGa 2
+        if (activeGameId === 'RomancingSaGa2') { // Romancing SaGa 2
             settings.active_mods_dir = path.join(settings.game_path, 'Game', 'Content', 'Paks', '~mods');
             settings.game_exe_path = path.join(settings.game_path, 'Game', 'Binaries', 'Win64', 'Romancing SaGa 2 RotS-Win64.exe');
-        } else if (id === 2) { // KCD2
+        } else if (activeGameId === 'KCD2') { // KCD2
             settings.active_mods_dir = path.join(settings.game_path, 'Mods');
             settings.game_exe_path = path.join(settings.game_path, 'Bin', 'Win64MasterMasterSteamPGO', 'KingdomCome.exe');
-        } else if (id === 1) { // Stellar Blade (or Generic UE Fallback)
+        } else if (activeGameId === 'StellarBlade') { // Stellar Blade
             const sbPath = path.join(settings.game_path, 'SB');
             const gamePath = path.join(settings.game_path, 'Game');
 
@@ -1307,6 +1323,33 @@ function getGamesData() {
     }
 }
 
+function sanitizeGameId(rawId) {
+    return String(rawId || '').trim().replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+function buildGameId(inputId, gameName) {
+    const normalizedInputId = sanitizeGameId(inputId);
+    if (normalizedInputId) return normalizedInputId;
+
+    const fromName = sanitizeGameId(String(gameName || '').replace(/\s+/g, ''));
+    if (fromName) return fromName;
+
+    return `Game${Date.now()}`;
+}
+
+function getNextSettingsId() {
+    const games = getGamesData();
+    const usedFromGameConfig = games
+        .map(g => Number(g.settings_id))
+        .filter(v => Number.isInteger(v) && v > 0);
+
+    const settingsMaxRow = db.prepare('SELECT MAX(id) as max_id FROM settings').get();
+    const maxFromSettingsTable = Number(settingsMaxRow?.max_id) || 0;
+    const maxUsed = Math.max(maxFromSettingsTable, ...usedFromGameConfig, 0);
+
+    return maxUsed + 1;
+}
+
 ipcMain.handle('get-games-list', () => {
     return getGamesData();
 });
@@ -1340,6 +1383,60 @@ ipcMain.handle('update-game-details', (event, { id, name, description, cover_ima
     }
 });
 
+ipcMain.handle('add-game', (event, { id, name, description, executable, cover_image }) => {
+    try {
+        const gameName = String(name || '').trim();
+        if (!gameName) {
+            return { success: false, message: 'Game name cannot be empty' };
+        }
+
+        const gameId = buildGameId(id, gameName);
+        if (!gameId) {
+            return { success: false, message: 'Invalid game ID' };
+        }
+
+        const existingGames = getGamesData();
+        const duplicated = existingGames.some(g => String(g.id).toLowerCase() === gameId.toLowerCase());
+        if (duplicated) {
+            return { success: false, message: `Game ID already exists: ${gameId}` };
+        }
+
+        const settingsId = getNextSettingsId();
+        const gameData = {
+            id: gameId,
+            name: gameName,
+            description: String(description || '').trim(),
+            cover_image: String(cover_image || '').trim(),
+            executable: String(executable || '').trim() || `${gameId}.exe`,
+            settings_id: settingsId,
+            displayName: gameName,
+            nexusUrl: '',
+            features: {
+                clothingList: false
+            },
+            uiConfig: {
+                windowTitle: `${gameName} Mod Manager`,
+                launchButtonText: 'Launch Game',
+                gamePathLabel: `${gameName} Game Root Directory:`
+            }
+        };
+
+        const validationErrors = validateGameConfig(gameData, `${gameId}.json`);
+        if (validationErrors.length > 0) {
+            return { success: false, message: validationErrors.join('; ') };
+        }
+
+        const gamePath = path.join(GAME_JSON_DIR, `${gameId}.json`);
+        fs.outputJsonSync(gamePath, gameData, { spaces: 2 });
+
+        ensureSettingsRow(settingsId);
+
+        return { success: true, game: gameData };
+    } catch (e) {
+        return { success: false, message: e.message };
+    }
+});
+
 ipcMain.handle('select-image-file', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
         title: '选择图片',
@@ -1360,9 +1457,8 @@ ipcMain.handle('get-all-settings', () => {
 
 ipcMain.handle('save-all-settings', (event, settings) => {
     try {
-        let id = 1;
-        if (activeGameId === 'KCD2') id = 2;
-        if (activeGameId === 'RomancingSaGa2') id = 3;
+        const id = getSettingsIdForGame(activeGameId);
+        ensureSettingsRow(id);
 
         const stmt = db.prepare(`
             UPDATE settings

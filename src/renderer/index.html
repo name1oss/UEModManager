@@ -714,7 +714,7 @@
                 <button class="settings-tab-button active" onclick="openSettingsTab(event, 'paths')"
                     data-i18n="settings.tab.paths">路径设置</button>
                 <button class="settings-tab-button" onclick="openSettingsTab(event, 'appearance')"
-                    data-i18n="settings.tab.appearance">外观设置</button>
+                    data-i18n="settings.tab.appearance">界面设置</button>
                 <button class="settings-tab-button" onclick="openSettingsTab(event, 'interaction')"
                     data-i18n="settings.tab.interaction">交互设置</button>
             </div>
@@ -871,6 +871,28 @@
                             </div>
                         </div>
 
+                        <!-- Language Switcher Card -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-language"></i> <span data-i18n="settings.language.title">语言 /
+                                    Language</span></h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9em;"
+                                data-i18n="settings.language.desc">选择界面显示语言（切换后立即生效）。</p>
+                            <div class="lang-switcher" id="langSwitcher">
+                                <button class="lang-btn" data-lang="zh-CN" onclick="setLanguage('zh-CN')">
+                                    <span class="lang-flag">🇨🇳</span>
+                                    <span class="lang-name" data-i18n="settings.language.option.zh">简体中文</span>
+                                </button>
+                                <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">
+                                    <span class="lang-flag">🇺🇸</span>
+                                    <span class="lang-name" data-i18n="settings.language.option.en">English</span>
+                                </button>
+                                <button class="lang-btn" data-lang="ja" onclick="setLanguage('ja')">
+                                    <span class="lang-flag">🇯🇵</span>
+                                    <span class="lang-name" data-i18n="settings.language.option.ja">日本語</span>
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -934,27 +956,6 @@
                         </div>
                     </div>
 
-                    <!-- Language Switcher Card -->
-                    <div class="settings-card">
-                        <h3><i class="fas fa-language"></i> <span data-i18n="settings.language.title">语言 /
-                                Language</span></h3>
-                        <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9em;"
-                            data-i18n="settings.language.desc">选择界面显示语言（切换后立即生效）。</p>
-                        <div class="lang-switcher" id="langSwitcher">
-                            <button class="lang-btn" data-lang="zh-CN" onclick="setLanguage('zh-CN')">
-                                <span class="lang-flag">🇨🇳</span>
-                                <span class="lang-name" data-i18n="settings.language.option.zh">简体中文</span>
-                            </button>
-                            <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">
-                                <span class="lang-flag">🇺🇸</span>
-                                <span class="lang-name" data-i18n="settings.language.option.en">English</span>
-                            </button>
-                            <button class="lang-btn" data-lang="ja" onclick="setLanguage('ja')">
-                                <span class="lang-flag">🇯🇵</span>
-                                <span class="lang-name" data-i18n="settings.language.option.ja">日本語</span>
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
             </div> <!-- End of settings-tab-container-wrapper -->

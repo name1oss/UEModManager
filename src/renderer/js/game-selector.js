@@ -23,6 +23,50 @@ document.addEventListener('DOMContentLoaded', () => {
     loadGames();
 });
 
+function sanitizeGameId(rawId) {
+    return String(rawId || '').replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+function createGameIdFromName(name) {
+    const fromName = sanitizeGameId(String(name || '').replace(/\s+/g, ''));
+    return fromName || `Game${Date.now()}`;
+}
+
+function isLocalPath(p) {
+    if (!p) return false;
+    return /^[a-zA-Z]:\\/.test(p) || p.startsWith('\\\\') || p.startsWith('/');
+}
+
+function showModalById(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.style.display = 'flex';
+    modal.offsetHeight;
+    modal.classList.add('show');
+}
+
+function hideModalById(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+async function persistCoverIfNeeded(gameName, imagePath) {
+    let nextPath = String(imagePath || '').trim();
+    if (!nextPath || !isLocalPath(nextPath) || nextPath.includes('game_cover')) {
+        return nextPath;
+    }
+
+    const coverResult = await ipcRenderer.invoke('save-game-cover', { gameName, sourcePath: nextPath });
+    if (!coverResult.success) {
+        throw new Error(coverResult.message || 'Unknown cover save error');
+    }
+    return coverResult.path;
+}
+
 function initScale() {
     const slider = document.getElementById('card-scale-slider');
     if (slider) {
@@ -210,31 +254,51 @@ function openEditModal(game) {
         previewContainer.innerHTML = `<span style="color:rgba(255,255,255,0.3);">${t('game_selector.edit.cover_select')}</span>`;
     }
 
-    const modal = document.getElementById('editGameModal');
-    modal.style.display = 'flex';
-    // Force reflow
-    modal.offsetHeight;
-    modal.classList.add('show');
+    showModalById('editGameModal');
 }
 
 function closeEditModal() {
-    const modal = document.getElementById('editGameModal');
-    modal.classList.remove('show');
+    hideModalById('editGameModal');
     setTimeout(() => {
-        modal.style.display = 'none';
         editingGameId = null;
-    }, 300); // Wait for transition
+    }, 300);
 }
 
-async function triggerImageSelect() {
+function openAddModal() {
+    const nameInput = document.getElementById('addGameName');
+    const descInput = document.getElementById('addGameDesc');
+    const idInput = document.getElementById('addGameId');
+    const exeInput = document.getElementById('addGameExecutable');
+    const imagePathInput = document.getElementById('addGameImagePath');
+    const previewContainer = document.getElementById('addGameImagePreview');
+
+    if (nameInput) nameInput.value = '';
+    if (descInput) descInput.value = '';
+    if (idInput) idInput.value = '';
+    if (exeInput) exeInput.value = '';
+    if (imagePathInput) imagePathInput.value = '';
+    if (previewContainer) {
+        previewContainer.innerHTML = `<span style="color:rgba(255,255,255,0.3); font-weight: 500;">${t('game_selector.add.cover_select')}</span>`;
+    }
+
+    showModalById('addGameModal');
+}
+
+function closeAddModal() {
+    hideModalById('addGameModal');
+}
+
+async function triggerImageSelect(targetInputId = 'editGameImagePath', targetPreviewId = 'editGameImagePreview') {
     const result = await ipcRenderer.invoke('select-image-file');
     if (result.success) {
         const path = result.path;
-        document.getElementById('editGameImagePath').value = path;
+        const input = document.getElementById(targetInputId);
+        if (input) input.value = path;
 
-        // Update Preview
-        const previewContainer = document.getElementById('editGameImagePreview');
-        previewContainer.innerHTML = `<img src="${path}" style="width:100%; height:100%; object-fit:cover;">`;
+        const previewContainer = document.getElementById(targetPreviewId);
+        if (previewContainer) {
+            previewContainer.innerHTML = `<img src="${path}" style="width:100%; height:100%; object-fit:cover;">`;
+        }
     }
 }
 
@@ -251,23 +315,12 @@ async function saveGameDetails() {
     }
 
     try {
-        // If an image path is selected (and it's a file path, checking if it starts with 'http' might fail for some cases but general logic holds)
-        // Check if imagePath is a local absolute path (Windows) to verify it's a new upload
-        // Simple heuristic: if it contains backslashes or starts with a drive letter, try to upload.
-        if (imagePath && (imagePath.includes('\\') || imagePath.includes('/')) && !imagePath.includes('game_cover')) {
-            const coverResult = await ipcRenderer.invoke('save-game-cover', { gameName: name, sourcePath: imagePath });
-            if (coverResult.success) {
-                imagePath = coverResult.path; // Update to the new local path
-                console.log('Cover image saved to:', imagePath);
-            } else {
-                console.error('Failed to save cover image:', coverResult.message);
-                if (!confirm(t('game_selector.confirm.cover_failed', { error: coverResult.message }))) {
-                    return;
-                }
-            }
-        }
+        imagePath = await persistCoverIfNeeded(name, imagePath);
     } catch (e) {
-        console.error("Error processing cover image:", e);
+        console.error('Error processing cover image:', e);
+        if (!confirm(t('game_selector.confirm.cover_failed', { error: e.message || 'Unknown error' }))) {
+            return;
+        }
     }
 
     const result = await ipcRenderer.invoke('update-game-details', {
@@ -284,3 +337,54 @@ async function saveGameDetails() {
         alert(t('game_selector.alert.save_failed', { message: result.message }));
     }
 }
+
+async function saveNewGame() {
+    const name = document.getElementById('addGameName').value.trim();
+    const desc = document.getElementById('addGameDesc').value.trim();
+    const inputGameId = document.getElementById('addGameId').value.trim();
+    const executableRaw = document.getElementById('addGameExecutable').value.trim();
+    let imagePath = document.getElementById('addGameImagePath').value.trim();
+
+    if (!name) {
+        alert(t('game_selector.alert.name_required'));
+        return;
+    }
+
+    const gameId = inputGameId ? sanitizeGameId(inputGameId) : createGameIdFromName(name);
+    if (!gameId) {
+        alert(t('game_selector.alert.invalid_id'));
+        return;
+    }
+
+    const executable = executableRaw || `${gameId}.exe`;
+
+    try {
+        imagePath = await persistCoverIfNeeded(name, imagePath);
+    } catch (e) {
+        console.error('Error processing add-game cover image:', e);
+        if (!confirm(t('game_selector.confirm.cover_failed', { error: e.message || 'Unknown error' }))) {
+            return;
+        }
+    }
+
+    const result = await ipcRenderer.invoke('add-game', {
+        id: gameId,
+        name,
+        description: desc,
+        executable,
+        cover_image: imagePath
+    });
+
+    if (!result || !result.success) {
+        alert(t('game_selector.alert.add_failed', { message: result?.message || 'Unknown error' }));
+        return;
+    }
+
+    closeAddModal();
+    await loadGames();
+}
+
+window.openAddModal = openAddModal;
+window.closeAddModal = closeAddModal;
+window.triggerImageSelect = triggerImageSelect;
+window.saveNewGame = saveNewGame;
