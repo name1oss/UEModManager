@@ -1,6 +1,6 @@
 {
   "name": "stellar-blade-mod-manager",
-  "version": "1.0.0",
+  "version": "2.4.0",
   "description": "UE Mod Manager Desktop App",
   "main": "src/main/main.js",
   "scripts": {
