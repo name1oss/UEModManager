@@ -274,7 +274,7 @@ body[data-theme="light"] .preset-tag.selected {
     background-color: rgba(20, 21, 30, 0.3);
     border: 1px solid var(--border-color);
     border-radius: 0 var(--border-radius-md) var(--border-radius-md) var(--border-radius-md);
-    margin: 2.2rem 0.5rem 0.8rem 0.5rem;
+    margin: 1.6rem 0.5rem 0.5rem 0.5rem;
     padding: 1.2rem 0.4rem 0.4rem 0.4rem;
     box-shadow: var(--shadow-sm);
     transition: all 0.2s ease;
@@ -288,14 +288,15 @@ body[data-theme="light"] .preset-tag.selected {
 
 .block-header {
     position: absolute;
-    top: -30px; /* Aligns exactly with the top border (1px border offset) */
-    left: -1px; /* Aligns exactly with the left border (1px border offset) */
-    height: 32px; /* Stretch down 1 more px to make sure the bottom border masks fully */
-    line-height: 29px;
+    top: -20px;
+    left: -1px;
+    height: 20px;
+    line-height: 18px;
+    margin: 0;
     padding: 0 1rem;
     box-sizing: border-box;
 
-    font-size: 0.9rem;
+    font-size: 0.84rem;
     font-weight: 600;
     border-radius: 8px 8px 0 0;
     display: inline-flex;
@@ -304,7 +305,7 @@ body[data-theme="light"] .preset-tag.selected {
     width: fit-content;
     max-width: min(78%, 460px);
     letter-spacing: 0.15px;
-    z-index: 2;
+    z-index: 3;
 
     border: 1px solid var(--border-color);
     border-bottom: none;
@@ -347,7 +348,7 @@ body[data-theme="light"] .preset-tag.selected {
     background: var(--bg-dark-2);
     color: var(--accent-blue);
     border-color: rgba(122, 162, 247, 0.3);
-    border-bottom: 3px solid var(--bg-dark-2); /* Mask underneath border strongly */
+    border-bottom: 1px solid rgba(122, 162, 247, 0.3);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
 }
@@ -360,7 +361,7 @@ body[data-theme="light"] .unique-block .block-header {
     color: var(--accent-blue);
     border-color: rgba(14, 165, 233, 0.4);
     background: var(--bg-dark-2);
-    border-bottom: 3px solid var(--bg-dark-2); /* Mask underneath border strongly */
+    border-bottom: 1px solid rgba(14, 165, 233, 0.4);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
 }
@@ -374,7 +375,7 @@ body[data-theme="light"] .unique-block .block-header {
     background: var(--bg-dark-2);
     color: var(--accent-purple);
     border-color: rgba(157, 124, 216, 0.3);
-    border-bottom: 3px solid var(--bg-dark-2); /* Mask underneath border strongly */
+    border-bottom: 1px solid rgba(157, 124, 216, 0.3);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
 }
@@ -387,7 +388,7 @@ body[data-theme="light"] .intersection-block .block-header {
     color: var(--accent-purple);
     border-color: rgba(139, 92, 246, 0.4);
     background: var(--bg-dark-2);
-    border-bottom: 3px solid var(--bg-dark-2); /* Mask underneath border strongly */
+    border-bottom: 1px solid rgba(139, 92, 246, 0.4);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
 }
@@ -400,23 +401,6 @@ body[data-theme="light"] .group-block {
 .group-block .mod-item {
     margin: 0.3rem 0.5rem;
     width: calc(100% - 1rem);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-md);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-sm);
-}
-
-.group-block .mod-item:hover {
-    background: var(--bg-card-hover);
-}
-
-body[data-theme="light"] .group-block .mod-item {
-    border-color: rgba(148, 163, 184, 0.2);
-    background: var(--bg-card);
-}
-
-body[data-theme="light"] .group-block .mod-item:hover {
-    background: var(--bg-card-hover);
 }
 
 /* ========================================= */
@@ -1932,3 +1916,4 @@ body[data-theme="light"] .pagination-controls {
 .button-launch-game:hover i {
     color: var(--text-primary) !important;
 }
+

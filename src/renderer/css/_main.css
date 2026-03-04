@@ -698,8 +698,8 @@ body[data-theme="light"] .sub-mod-item:hover {
     background: rgba(36, 40, 59, 0.4);
     border: 1px solid var(--border-color);
     border-radius: 0 var(--border-radius-md) var(--border-radius-md) var(--border-radius-md);
-    margin-top: 2.2rem;
-    margin-bottom: 1.2rem;
+    margin-top: 1.6rem;
+    margin-bottom: 0.6rem;
     padding: 1.2rem 0.4rem 0.4rem 0.4rem;
     overflow: visible;
     display: flex;
@@ -719,19 +719,19 @@ body[data-theme="light"] .component-wrapper {
 
 .component-header {
     position: absolute;
-    top: -30px;
+    top: -20px;
     left: -1px;
-    height: 31px;
-    line-height: 29px;
+    height: 20px;
+    line-height: 18px;
     box-sizing: border-box;
     
     display: inline-flex;
     max-width: calc(100% - 1rem);
     background: var(--bg-dark-2);
-    padding: 0 1.2rem;
+    padding: 0 0.9rem;
     font-weight: 700;
     color: var(--accent-blue);
-    font-size: 1.02rem;
+    font-size: 0.9rem;
     border: 1px solid var(--border-color);
     border-bottom: none;
     border-radius: 8px 8px 0 0;
@@ -754,9 +754,9 @@ body[data-theme="light"] .component-header {
     width: calc(100% - 8px);
     border-radius: var(--border-radius-md);
     border: 1px solid var(--border-color);
-    background: rgba(0, 0, 0, 0.2);
-    box-shadow: none;
-    transition: all 0.2s;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .component-wrapper .mod-item.selected {
@@ -769,4 +769,5 @@ body[data-theme="light"] .component-header {
     background: var(--bg-card-hover);
     z-index: 2;
 }
+
 
