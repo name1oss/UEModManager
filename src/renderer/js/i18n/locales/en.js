@@ -37,6 +37,8 @@ window.__LOCALE_DATA__ = {
     'topbar.filter.all_tags': 'All Tags',
     'topbar.header.name': 'Mod Name / Priority',
     'topbar.header.tags': 'Tags',
+    'topbar.drag_lock.unlocked': 'Drag Sort: Unlocked',
+    'topbar.drag_lock.locked': 'Drag Sort: Locked',
 
     // --- Settings Modal ---
     'settings.title': 'Settings',

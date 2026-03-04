@@ -37,6 +37,8 @@ window.__LOCALE_DATA__ = {
     'topbar.filter.all_tags': 'すべてのタグ',
     'topbar.header.name': 'Mod 名 / 優先度',
     'topbar.header.tags': 'タグ',
+    'topbar.drag_lock.unlocked': '\u30c9\u30e9\u30c3\u30b0\u4e26\u3073\u66ff\u3048: \u672a\u30ed\u30c3\u30af',
+    'topbar.drag_lock.locked': '\u30c9\u30e9\u30c3\u30b0\u4e26\u3073\u66ff\u3048: \u30ed\u30c3\u30af\u4e2d',
 
     // --- Settings Modal ---
     'settings.title': '設定',

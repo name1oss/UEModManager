@@ -251,13 +251,30 @@ async function loadAndRenderModList() {
                 return { parsedGroups, mods };
             });
 
-            partitionEntries.sort((a, b) => a.parsedGroups.length - b.parsedGroups.length);
+            const getOrderValue = (m) => (Number.isFinite(m?.display_order) ? m.display_order : Number.MAX_SAFE_INTEGER);
+
+            partitionEntries.sort((a, b) => {
+                const minA = Math.min(...a.mods.map(getOrderValue));
+                const minB = Math.min(...b.mods.map(getOrderValue));
+                if (minA !== minB) return minA - minB;
+                if (a.parsedGroups.length !== b.parsedGroups.length) {
+                    return a.parsedGroups.length - b.parsedGroups.length;
+                }
+                return a.parsedGroups.join(' / ').localeCompare(b.parsedGroups.join(' / '), 'zh-CN');
+            });
 
             const blocks = partitionEntries.map(({ parsedGroups, mods }) => ({
                 type: parsedGroups.length === 1 ? 'unique' : 'intersection',
                 group_name: parsedGroups.length === 1 ? parsedGroups[0] : undefined,
                 group_names: parsedGroups.length > 1 ? parsedGroups : undefined,
-                mods: mods.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+                block_key: parsedGroups.length === 1
+                    ? `u:${parsedGroups[0]}`
+                    : `i:${[...parsedGroups].sort().join('|')}`,
+                mods: mods.sort((a, b) => {
+                    const orderDiff = getOrderValue(a) - getOrderValue(b);
+                    if (orderDiff !== 0) return orderDiff;
+                    return (a.display_name || a.name).localeCompare((b.display_name || b.name), 'zh-CN');
+                })
             }));
 
             const componentDisplayName = new Set(blocks.flatMap(block => block.group_names || [block.group_name]));
@@ -392,7 +409,7 @@ function createGroupComponentHTML(component) {
         const modsHTML = component.blocks
             .map(block => block.mods.map(mod => createModItemHTML(mod)).join(''))
             .join('');
-        return `<div class="component-wrapper" draggable="${currentSortMethod === 'default' ? 'true' : 'false'}" data-component-id="${component.component_id}"><div class="component-header">${component.component_name}</div>${modsHTML}</div>`;
+        return `<div class="component-wrapper" draggable="false" data-component-id="${component.component_id}"><div class="component-header" draggable="${(currentSortMethod === 'default' && !window.dragSortLocked) ? 'true' : 'false'}" title="${component.component_name}">${component.component_name}</div>${modsHTML}</div>`;
     }
 
     const blocksHTML = component.blocks.map(block => {
@@ -414,13 +431,14 @@ function createGroupComponentHTML(component) {
         }
 
         const safeTitle = headerText ? String(headerText).replace(/"/g, '&quot;') : '';
+        const safeBlockKey = String(block.block_key || '').replace(/"/g, '&quot;');
         const headerHTML = headerText
-            ? `<div class="block-header" title="${safeTitle}"><i class="fas ${headerIcon}"></i><span class="block-header-text">${headerText}</span></div>`
+            ? `<div class="block-header" draggable="${(currentSortMethod === 'default' && !window.dragSortLocked) ? 'true' : 'false'}" title="${safeTitle}"><i class="fas ${headerIcon}"></i><span class="block-header-text">${headerText}</span></div>`
             : '';
-        return `<div class="group-block ${blockClass}">${headerHTML}${modsHTML}</div>`;
+        return `<div class="group-block ${blockClass}" data-block-key="${safeBlockKey}">${headerHTML}${modsHTML}</div>`;
     }).join('');
 
-    return `<div class="component-wrapper" draggable="${currentSortMethod === 'default' ? 'true' : 'false'}" data-component-id="${component.component_id}"><div class="component-header">${component.component_name}</div>${blocksHTML}</div>`;
+    return `<div class="component-wrapper" draggable="false" data-component-id="${component.component_id}"><div class="component-header" draggable="${(currentSortMethod === 'default' && !window.dragSortLocked) ? 'true' : 'false'}" title="${component.component_name}">${component.component_name}</div>${blocksHTML}</div>`;
 }
 
 // 核心函数：生成 Mod 列表项 HTML
@@ -576,7 +594,7 @@ function createModItemHTML(mod) {
         }
         const subModTagsHTML = (sub_mod.tags || []).map(tag => tag ? `<span class="tag" data-tag-name="${tag.toLowerCase()}">${tag}</span>` : '').join('');
 
-        return `<div class="sub-mod-item ${isSubModSelected ? 'selected' : ''} ${subHasFileConflict ? 'has-conflict' : ''}" data-sub-mod-name="${sub_mod.name}" data-sub-mod-is-active="${sub_mod.is_active}" data-parent-mod-name="${mod.name}" data-tags="${(sub_mod.tags || []).map(t => t.toLowerCase()).join(',')}" draggable="${currentSortMethod === 'default' ? 'true' : 'false'}">
+        return `<div class="sub-mod-item ${isSubModSelected ? 'selected' : ''} ${subHasFileConflict ? 'has-conflict' : ''}" data-sub-mod-name="${sub_mod.name}" data-sub-mod-is-active="${sub_mod.is_active}" data-parent-mod-name="${mod.name}" data-tags="${(sub_mod.tags || []).map(t => t.toLowerCase()).join(',')}" draggable="${(currentSortMethod === 'default' && !window.dragSortLocked) ? 'true' : 'false'}">
                     <div class="sub-mod-name-column"><input type="checkbox" class="sub-mod-checkbox mod-checkbox" value="${sub_mod.name}" ${isSubModSelected ? 'checked' : ''}><div class="conflict-icon-container">${subHasFileConflict ? `<span class="conflict-icon" data-tooltip="${subConflictTooltipContent}"><i class="fas fa-exclamation-triangle"></i></span>` : ''}</div><span class="sub-mod-name">${subModNameDisplayHtml}</span></div>
                     <div class="sub-mod-tags-column mod-tags-column">${subModTagsHTML}</div>
                     <div class="sub-mod-status-column mod-status-column">${subButtonHtml}</div>
@@ -587,7 +605,7 @@ function createModItemHTML(mod) {
 
     const tagsHTML = mod.tags.map(tag => tag ? `<span class="tag" data-tag-name="${tag.toLowerCase()}">${tag}</span>` : '').join('');
 
-    return `<div class="mod-item ${isSelected ? 'selected' : ''} ${isInSimilarGroup ? 'in-similar-group' : ''} ${hasFileConflict ? 'has-conflict' : ''}" data-mod-name="${mod.name}" data-tags="${mod.tags.map(t => t.toLowerCase()).join(',')}" data-is-active="${mod.is_active}" data-has-submods="${mod.sub_mods.length > 0}" data-priority="${priority}" draggable="${currentSortMethod === 'default' ? 'true' : 'false'}">
+    return `<div class="mod-item ${isSelected ? 'selected' : ''} ${isInSimilarGroup ? 'in-similar-group' : ''} ${hasFileConflict ? 'has-conflict' : ''}" data-mod-name="${mod.name}" data-tags="${mod.tags.map(t => t.toLowerCase()).join(',')}" data-is-active="${mod.is_active}" data-has-submods="${mod.sub_mods.length > 0}" data-priority="${priority}" draggable="${(currentSortMethod === 'default' && !window.dragSortLocked) ? 'true' : 'false'}">
             <div class="mod-name-column"><input type="checkbox" class="mod-checkbox" value="${mod.name}" ${isSelected ? 'checked' : ''}><div class="conflict-icon-container">${hasFileConflict ? `<span class="conflict-icon" data-tooltip="${conflictTooltipContent}"><i class="fas fa-exclamation-triangle"></i></span>` : ''}</div><span class="mod-name-text">${modNameDisplayHtml}${priorityDisplay}</span>${mod.sub_mods.length > 0 ? `<span class="toggle-icon"></span>` : ''}</div>
             <div class="mod-tags-column">${tagsHTML}</div>
             <div class="mod-status-column">${buttonHtml}</div>

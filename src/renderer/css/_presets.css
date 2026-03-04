@@ -310,6 +310,16 @@ body[data-theme="light"] .preset-tag.selected {
     border: 1px solid var(--border-color);
     border-bottom: none;
     background: var(--bg-dark-2);
+    cursor: grab;
+    user-select: none;
+}
+
+.block-header:active {
+    cursor: grabbing;
+}
+
+body.drag-sort-locked .block-header {
+    cursor: not-allowed !important;
 }
 
 .block-header i {
@@ -464,6 +474,10 @@ body[data-theme="light"] .context-menu-item.danger:hover {
     align-items: center;
 }
 
+.group-block.dragging {
+    opacity: 0.55;
+}
+
 /* Hide children but keep layout flow logic if needed, though dragging usually just needs the box */
 .component-wrapper.dragging * {
     visibility: hidden !important;
@@ -485,7 +499,7 @@ body[data-theme="light"] .context-menu-item.danger:hover {
 .drag-placeholder {
     margin: 0;
     border-radius: var(--border-radius-md, 4px);
-    transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.12s cubic-bezier(0.4, 0, 0.2, 1), transform 0.12s ease;
     pointer-events: none;
     /* Ensure it doesn't interfere with drag events */
     box-sizing: border-box;
@@ -534,16 +548,49 @@ body[data-theme="light"] .context-menu-item.danger:hover {
     height: 2px;
     border-radius: 999px;
     background: var(--accent-blue, #7aa2f7);
-    box-shadow: 0 0 8px rgba(122, 162, 247, 0.6);
+    box-shadow: 0 0 5px rgba(122, 162, 247, 0.42);
+}
+
+.group-block-placeholder,
+.group-mod-placeholder {
+    height: 0;
+    position: relative;
+    pointer-events: none;
+    margin: 0.1rem 0;
+}
+
+.group-block-placeholder::before,
+.group-mod-placeholder::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: -1px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--accent-blue, #7aa2f7);
+    box-shadow: 0 0 5px rgba(122, 162, 247, 0.38);
+}
+
+.group-mod-placeholder::before {
+    left: 1.2rem;
+    right: 1.2rem;
+}
+
+.group-mod-swap-target {
+    border-color: var(--accent-blue, #7aa2f7) !important;
+    background-color: rgba(122, 162, 247, 0.12) !important;
+    box-shadow: inset 0 0 0 1px rgba(122, 162, 247, 0.2) !important;
 }
 
 /* Swap Target Styling */
 .swap-target {
-    border: 2px solid var(--accent-blue, #7aa2f7) !important;
-    background-color: rgba(122, 162, 247, 0.15) !important;
-    box-shadow: inset 0 0 10px rgba(122, 162, 247, 0.3) !important;
+    border: 1px solid var(--accent-blue, #7aa2f7) !important;
+    background-color: rgba(122, 162, 247, 0.1) !important;
+    box-shadow: inset 0 0 0 1px rgba(122, 162, 247, 0.2) !important;
     transform: none;
-    transition: border-color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
+    transition: border-color 0.1s ease, background-color 0.1s ease, box-shadow 0.1s ease;
+    will-change: background-color, box-shadow;
 }
 
 /* Custom Drag Ghost Styling */
@@ -590,10 +637,9 @@ body[data-theme="light"] .context-menu-item.danger:hover {
 /* While dragging, the original item */
 .mod-item.dragging,
 .sub-mod-item.dragging {
-    opacity: 0.4;
-    filter: grayscale(0.5) brightness(0.8);
+    opacity: 0.5;
     transform: scale(0.99);
-    transition: all 0.2s ease;
+    transition: transform 0.12s ease, opacity 0.12s ease;
 }
 
 .component-wrapper.dragging {

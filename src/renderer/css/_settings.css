@@ -89,7 +89,7 @@ body[data-theme="light"] .lang-btn.active {
 .toast-container {
     position: fixed;
     bottom: 3rem;
-    right: 3rem;
+    right: calc(3rem + 1.8rem);
     z-index: 10000;
     display: flex;
     flex-direction: column;
@@ -108,10 +108,16 @@ body[data-theme="light"] .lang-btn.active {
     min-width: 340px;
     font-weight: 500;
     backdrop-filter: blur(10px);
-    pointer-events: auto;
+    pointer-events: none;
     display: flex;
     align-items: center;
     gap: 1.5rem;
+}
+
+#downloadProgressPopup {
+    position: fixed;
+    right: calc(3rem + 1.8rem);
+    pointer-events: none;
 }
 
 /* ========================================= */
@@ -285,6 +291,12 @@ body[data-theme="light"] .lang-btn.active {
 .mod-preview-container.visible {
     display: block;
     opacity: 1;
+}
+
+body.is-dragging #modPreviewContainer,
+body.is-inner-dragging #modPreviewContainer {
+    display: none !important;
+    opacity: 0 !important;
 }
 
 .mod-preview-image-wrapper {
@@ -689,7 +701,7 @@ body[data-theme="light"] .simple-spinner {
     pointer-events: none;
     position: fixed;
     bottom: 3rem;
-    right: 3rem;
+    right: calc(3rem + 1.8rem);
     width: 50px;
     height: 50px;
     background-color: rgba(20, 21, 30, 0.5);

@@ -52,6 +52,8 @@ let currentSimilarGroupName = null;
 let currentSimilarGroupSearchQuery = '';
 let renderedItemOrder = [];
 let isFileDialogOpen = false;
+const DRAG_SORT_LOCK_STORAGE_KEY = 'drag_sort_locked';
+window.dragSortLocked = false;
 
 // Appearance Settings State
 let currentTheme = 'tokyo-night';
@@ -85,6 +87,42 @@ function setupWindowControls() {
     });
     windowControlsBound = true;
 }
+
+function syncDragSortLockButton() {
+    const lockBtn = document.getElementById('dragSortLockBtn');
+    const locked = !!window.dragSortLocked;
+    document.body.classList.toggle('drag-sort-locked', locked);
+    if (!lockBtn) return;
+
+    lockBtn.classList.toggle('locked', locked);
+    lockBtn.setAttribute('aria-pressed', locked ? 'true' : 'false');
+    lockBtn.setAttribute('data-i18n-title', locked ? 'topbar.drag_lock.locked' : 'topbar.drag_lock.unlocked');
+    lockBtn.title = tr(locked ? 'topbar.drag_lock.locked' : 'topbar.drag_lock.unlocked');
+
+    const icon = lockBtn.querySelector('i');
+    if (icon) {
+        icon.classList.remove('fa-lock', 'fa-lock-open');
+        icon.classList.add(locked ? 'fa-lock' : 'fa-lock-open');
+    }
+}
+
+function setDragSortLocked(locked, persist = true) {
+    window.dragSortLocked = !!locked;
+    if (persist) {
+        localStorage.setItem(DRAG_SORT_LOCK_STORAGE_KEY, window.dragSortLocked ? '1' : '0');
+    }
+    syncDragSortLockButton();
+
+    if (window.dragSortLocked && typeof handleModMouseLeave === 'function') {
+        handleModMouseLeave();
+    }
+    if (typeof initializeDragAndDrop === 'function') {
+        initializeDragAndDrop();
+    }
+}
+
+window.setDragSortLocked = setDragSortLocked;
+window.syncDragSortLockButton = syncDragSortLockButton;
 
 // --- IPC Wrapper ---
 async function callIPC(channel, args = {}, onSuccess = null, buttonElement = null, suppressGlobalLoader = false) {
@@ -624,6 +662,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             sortSelect.value = currentSortMethod;
         }
 
+        const dragSortLockBtn = document.getElementById('dragSortLockBtn');
+        const storedDragSortLock = localStorage.getItem(DRAG_SORT_LOCK_STORAGE_KEY);
+        window.dragSortLocked = storedDragSortLock === '1';
+        syncDragSortLockButton();
+        if (dragSortLockBtn) {
+            dragSortLockBtn.addEventListener('click', () => {
+                setDragSortLocked(!window.dragSortLocked, true);
+            });
+        }
+
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.value = currentSearchQuery;
@@ -637,7 +685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // hideContextMenu is in ui-preview-drag-and-drop.js
             if (!e.target.closest('#contextMenu')) hideContextMenu();
             // clearAllSelections is in mod-manager.js
-            if (!e.target.closest('.mod-list, .sidebar, .modal, .main-header, #backToTopBtn, #sortSelect, #contextMenu, .dropdown')) {
+            if (!e.target.closest('.mod-list, .sidebar, .modal, .main-header, #backToTopBtn, #sortSelect, #dragSortLockBtn, #contextMenu, .dropdown')) {
                 clearAllSelections();
             }
         });

@@ -37,6 +37,8 @@ window.__LOCALE_DATA__ = {
     'topbar.filter.all_tags': '全部标签',
     'topbar.header.name': 'Mod 名称 / 优先级',
     'topbar.header.tags': '标签',
+    'topbar.drag_lock.unlocked': '\u62d6\u62fd\u6392\u5e8f\uff1a\u672a\u9501\u5b9a',
+    'topbar.drag_lock.locked': '\u62d6\u62fd\u6392\u5e8f\uff1a\u5df2\u9501\u5b9a',
 
     // --- Settings Modal ---
     'settings.title': '设置',

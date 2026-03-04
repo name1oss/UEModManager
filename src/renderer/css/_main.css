@@ -212,6 +212,45 @@ body[data-theme="light"] .tag-only-filter-btn.active {
     flex-shrink: 0;
     display: flex;
     align-items: center;
+    gap: 0.8rem;
+}
+
+.drag-lock-btn {
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+}
+
+.drag-lock-btn:hover {
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+    background-color: var(--bg-card);
+}
+
+.drag-lock-btn.locked {
+    border-color: rgba(224, 175, 104, 0.55);
+    color: var(--accent-yellow);
+    background: rgba(224, 175, 104, 0.12);
+    box-shadow: 0 0 10px rgba(224, 175, 104, 0.16);
+}
+
+.drag-lock-btn:active {
+    transform: scale(0.96);
+}
+
+body.drag-sort-locked .component-header,
+body.drag-sort-locked .block-header {
+    cursor: not-allowed !important;
 }
 
 /* Mod list table headers */
@@ -307,8 +346,11 @@ select option,
 .mod-list-scroll-area {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 0 1rem 2rem 3rem;
-    /* Reduced right padding so scrollbar is at the edge */
+    padding: 0 0.6rem 2rem 3rem;
+    /* Keep a dedicated scrollbar lane to avoid accidental overlap by floating UI */
+    scrollbar-gutter: stable;
+    position: relative;
+    z-index: 1;
     scroll-behavior: smooth;
 
     /* Disable browser's native drag-and-drop auto-scroll */
@@ -318,19 +360,23 @@ select option,
     overscroll-behavior: contain;
 }
 
+.mod-list-scroll-area::-webkit-scrollbar {
+    width: 16px;
+}
+
 .mod-list {
     --mod-list-gap: 0.9rem;
     display: flex;
     flex-direction: column;
     gap: var(--mod-list-gap);
-    padding-right: 2rem;
-    /* Give padding to inner list to compensate for scroll-area padding */
+    padding-right: 0.8rem;
+    /* Keep content away from the dedicated scrollbar lane */
 }
 
 /* --- CARD STYLE: Mod Items --- */
 .mod-item,
 .component-wrapper {
-    will-change: transform;
+    will-change: auto;
 }
 
 .mod-item {
@@ -346,7 +392,10 @@ select option,
     box-shadow: var(--shadow-sm);
 
     align-items: center;
-    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
     cursor: default;
 
     backdrop-filter: blur(8px);
@@ -403,9 +452,9 @@ body[data-theme="light"] .mod-item:hover {
 
 .mod-item.dragging {
     opacity: 0.4;
-    transform: scale(0.95);
-    border: 2px dashed var(--accent-blue);
-    background: transparent;
+    transform: scale(0.985);
+    border-color: var(--accent-blue);
+    background: var(--bg-card);
 }
 
 .mod-name-column {
@@ -712,6 +761,25 @@ body.is-dragging .component-wrapper * {
     pointer-events: none !important;
 }
 
+body.is-dragging .mod-item,
+body.is-dragging .component-wrapper,
+body.is-inner-dragging .mod-item,
+body.is-inner-dragging .group-block {
+    will-change: transform;
+}
+
+body.is-dragging .mod-item,
+body.is-inner-dragging .mod-item {
+    transition: none !important;
+    backdrop-filter: none;
+}
+
+body.is-dragging .mod-item:hover,
+body.is-inner-dragging .mod-item:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+}
+
 body[data-theme="light"] .component-wrapper {
     background: rgba(255, 255, 255, 0.5);
     border-color: rgba(148, 163, 184, 0.3);
@@ -742,11 +810,18 @@ body[data-theme="light"] .component-wrapper {
     text-transform: none;
     letter-spacing: 0.2px;
     z-index: 2;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-drag: element;
 }
 
 body[data-theme="light"] .component-header {
     background: var(--bg-dark-2);
     border-color: rgba(148, 163, 184, 0.3);
+}
+
+.component-header:active {
+    cursor: grabbing;
 }
 
 .component-wrapper > .mod-item {
@@ -756,7 +831,10 @@ body[data-theme="light"] .component-header {
     border: 1px solid var(--border-color);
     background: var(--bg-card);
     box-shadow: var(--shadow-sm);
-    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .component-wrapper .mod-item.selected {
