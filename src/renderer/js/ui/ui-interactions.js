@@ -1438,8 +1438,11 @@ function initializeDragAndDrop() {
 
     // ModList listeners - keeping dragover/drop restricted to the list for sorting logic
     modList.removeEventListener('dragover', handleDragOver);
+    modList.removeEventListener('dragover', handleDragOverOptimized);
     modList.removeEventListener('drop', handleDrop);
+    modList.removeEventListener('drop', handleDropOptimized);
     document.removeEventListener('dragend', handleDragEnd);
+    document.removeEventListener('dragend', handleDragEndOptimized);
 
     document.querySelectorAll('.mod-list > .mod-item[draggable="true"], .mod-list > .component-wrapper[draggable="true"]').forEach(item => {
         item.removeEventListener('dragstart', handleDragStart);
@@ -1455,9 +1458,9 @@ function initializeDragAndDrop() {
         item.addEventListener('dragstart', handleDragStart);
     });
 
-    modList.addEventListener('dragover', handleDragOver);
-    modList.addEventListener('drop', handleDrop);
-    document.addEventListener('dragend', handleDragEnd);
+    modList.addEventListener('dragover', handleDragOverOptimized);
+    modList.addEventListener('drop', handleDropOptimized);
+    document.addEventListener('dragend', handleDragEndOptimized);
 }
 
 // 鏂板锛氬閮ㄦ枃浠舵嫋鎷藉鐞?
@@ -1615,6 +1618,7 @@ function handleDragStart(e) {
     e.dataTransfer.setDragImage(dragImage, 0, 0);
 
     document.body.classList.add('is-dragging');
+    clearMainListDropHints();
 
     // Add global scroll listener immediately to avoid race conditions
     // Use capture phase (true) to ensure this handler runs FIRST, before any bubbling handlers
@@ -1632,6 +1636,112 @@ function handleDragStart(e) {
             document.body.removeChild(dragImage);
         }
     }, 0);
+}
+
+let currentMainListDropTarget = null;
+let currentMainListDropMode = '';
+
+function clearMainListDropHints() {
+    const placeholder = document.getElementById('drag-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const swapTarget = document.querySelector('.swap-target');
+    if (swapTarget) swapTarget.classList.remove('swap-target');
+
+    currentMainListDropTarget = null;
+    currentMainListDropMode = '';
+}
+
+function handleDragOverOptimized(e) {
+    if (currentSortMethod !== 'default' || draggedItems.length === 0) return;
+
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+
+    const target = e.target.closest('.mod-list > .mod-item[draggable="true"], .mod-list > .component-wrapper[draggable="true"]');
+    if (!target || draggedItems.includes(target)) {
+        clearMainListDropHints();
+        return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const threshold = rect.height * 0.25;
+    const isDropBefore = y < threshold;
+    const isDropAfter = y > rect.height - threshold;
+    const dropMode = (isDropBefore || isDropAfter) ? (isDropBefore ? 'before' : 'after') : 'swap';
+
+    // Prevent class flip-flop on every dragover frame.
+    if (target === currentMainListDropTarget && dropMode === currentMainListDropMode) return;
+
+    const existingSwapTarget = document.querySelector('.swap-target');
+    if (existingSwapTarget && existingSwapTarget !== target) {
+        existingSwapTarget.classList.remove('swap-target');
+    }
+
+    const existingPlaceholder = document.getElementById('drag-placeholder');
+    if (dropMode === 'swap') {
+        if (existingPlaceholder) existingPlaceholder.remove();
+        target.classList.add('swap-target');
+    } else {
+        if (existingSwapTarget) existingSwapTarget.classList.remove('swap-target');
+        target.classList.remove('swap-target');
+
+        const placeholder = existingPlaceholder || document.createElement('div');
+        if (!existingPlaceholder) {
+            placeholder.id = 'drag-placeholder';
+            const isGroupDrag = draggedItems.some(item => item.classList.contains('component-wrapper'));
+            placeholder.className = isGroupDrag ? 'drag-placeholder group-placeholder' : 'drag-placeholder mod-placeholder';
+        }
+
+        if (isDropBefore) target.parentNode.insertBefore(placeholder, target);
+        else target.parentNode.insertBefore(placeholder, target.nextSibling);
+    }
+
+    currentMainListDropTarget = target;
+    currentMainListDropMode = dropMode;
+}
+
+function handleDropOptimized(e) {
+    if (currentSortMethod !== 'default' || draggedItems.length === 0) return;
+
+    e.preventDefault();
+
+    const placeholder = document.getElementById('drag-placeholder');
+    const swapTarget = document.querySelector('.swap-target');
+
+    if (swapTarget) {
+        const parent = swapTarget.parentNode;
+        if (draggedItems.length === 1 && swapTarget !== draggedItems[0]) {
+            const dragHolder = document.createElement('div');
+            parent.insertBefore(dragHolder, draggedItems[0]);
+            parent.insertBefore(draggedItems[0], swapTarget);
+            parent.insertBefore(swapTarget, dragHolder);
+            dragHolder.remove();
+        } else {
+            draggedItems.forEach(item => parent.insertBefore(item, swapTarget));
+        }
+
+        clearMainListDropHints();
+        saveModOrder();
+    } else if (placeholder) {
+        draggedItems.forEach(item => placeholder.parentNode.insertBefore(item, placeholder));
+        clearMainListDropHints();
+        saveModOrder();
+    }
+}
+
+function handleDragEndOptimized() {
+    stopAutoScroll();
+    document.removeEventListener('dragover', handleDragOverScroll, true);
+    document.body.classList.remove('is-dragging');
+
+    const scrollContainer = document.querySelector('.mod-list-scroll-area');
+    if (scrollContainer) scrollContainer.style.scrollBehavior = '';
+
+    clearMainListDropHints();
+    draggedItems.forEach(item => item.classList.remove('dragging'));
+    draggedItems = [];
 }
 
 function handleDragOver(e) {
@@ -1934,6 +2044,7 @@ function handleSubModDragStart(e) {
     // Enable dragover scroll wrapper
     document.addEventListener('dragover', handleDragOverScroll, true);
     document.body.classList.add('is-dragging');
+    clearMainListDropHints();
 
     const scrollContainer = document.querySelector('.mod-list-scroll-area');
     if (scrollContainer) {

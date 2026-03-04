@@ -387,22 +387,35 @@ function findConflictsForMod(modName) {
 }
 
 function createGroupComponentHTML(component) {
+    const hasIntersection = component.blocks.some(block => block.type === 'intersection');
     const blocksHTML = component.blocks.map(block => {
         // 修复：确保组内 mod item 渲染时也能正确设置 priority 数据集
         const modsHTML = block.mods.map(mod => createModItemHTML(mod)).join('');
         let headerText = '';
         let blockClass = '';
-        const isSingleUniqueBlockInComponent = component.blocks.length === 1 && block.type === 'unique';
+        let headerIcon = '';
 
         if (block.type === 'unique') {
-            headerText = isSingleUniqueBlockInComponent ? '' : `<i class="fas fa-folder"></i> ${t('group.belongs_to', { group: block.group_name })}`;
-            blockClass = 'unique-block';
+            if (hasIntersection) {
+                headerText = t('group.belongs_to', { parent: block.group_name });
+                blockClass = 'unique-block';
+                headerIcon = 'fa-folder';
+            } else {
+                // No intersection in this component: remove the blue "belongs to" frame.
+                headerText = '';
+                blockClass = 'no-intersection-block';
+            }
         } else {
-            headerText = `<i class="fas fa-layer-group"></i> ${t('group.intersection', { groups: block.group_names.join(', ') })}`;
+            const groupsText = (block.group_names || []).join(' / ');
+            headerText = `${t('group.intersection')}: ${groupsText}`;
             blockClass = 'intersection-block';
+            headerIcon = 'fa-layer-group';
         }
 
-        const headerHTML = headerText ? `<div class="block-header">${headerText}</div>` : '';
+        const safeTitle = headerText ? String(headerText).replace(/"/g, '&quot;') : '';
+        const headerHTML = headerText
+            ? `<div class="block-header" title="${safeTitle}"><i class="fas ${headerIcon}"></i><span class="block-header-text">${headerText}</span></div>`
+            : '';
         return `<div class="group-block ${blockClass}">${headerHTML}${modsHTML}</div>`;
     }).join('');
 

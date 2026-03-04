@@ -319,9 +319,10 @@ select option,
 }
 
 .mod-list {
+    --mod-list-gap: 0.9rem;
     display: flex;
     flex-direction: column;
-    gap: 1.2rem;
+    gap: var(--mod-list-gap);
     padding-right: 2rem;
     /* Give padding to inner list to compensate for scroll-area padding */
 }
@@ -694,11 +695,11 @@ body[data-theme="light"] .sub-mod-item:hover {
 
 /* Make sure inner elements of component-wrapper don't interfere with drop targeting */
 .component-wrapper {
-    background: rgba(20, 21, 30, 0.4);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    margin-bottom: 1rem;
-    overflow: hidden;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 0.6rem;
+    overflow: visible;
     display: flex;
     flex-direction: column;
 }
@@ -708,20 +709,32 @@ body.is-dragging .component-wrapper * {
 }
 
 body[data-theme="light"] .component-wrapper {
-    background: rgba(255, 255, 255, 0.5);
+    background: transparent;
 }
 
 .component-header {
-    background: linear-gradient(90deg, rgba(122, 162, 247, 0.15) 0%, transparent 100%);
-    padding: 1.2rem 2rem;
+    align-self: flex-start;
+    display: inline-flex;
+    max-width: calc(100% - 1rem);
+    background: rgba(20, 21, 30, 0.72);
+    padding: 0.42rem 0.95rem;
     font-weight: 700;
     color: var(--accent-blue);
-    font-size: 1.3rem;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
+    font-size: 1.02rem;
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
     align-items: center;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: none;
+    letter-spacing: 0.2px;
+    margin-left: 0.35rem;
+}
+
+body[data-theme="light"] .component-header {
+    background: rgba(255, 255, 255, 0.92);
 }
 
 .component-wrapper .mod-item {

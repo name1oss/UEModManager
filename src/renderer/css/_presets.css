@@ -271,43 +271,65 @@ body[data-theme="light"] .preset-tag.selected {
 /* Mod Group Card Styles */
 /* ========================================= */
 .group-block {
-    background-color: var(--bg-card);
+    background-color: rgba(20, 21, 30, 0.2);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);
-    margin: 1rem 0.5rem;
-    padding: 0.5rem;
+    margin: 0.6rem 0.5rem;
+    padding: 0.32rem 0.12rem 0.28rem 0.12rem;
     box-shadow: var(--shadow-sm);
     transition: all 0.2s ease;
 }
 
 .group-block:hover {
     box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
+    transform: none;
     border-color: var(--border-color-hover);
 }
 
 .block-header {
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     font-weight: 600;
-    margin-bottom: 0.8rem;
-    padding: 0.5rem 0.8rem;
-    border-radius: var(--border-radius-sm);
-    display: flex;
+    margin-bottom: 0.45rem;
+    padding: 0.24rem 0.62rem;
+    border-radius: 8px 8px 4px 4px;
+    display: inline-flex;
     align-items: center;
-    gap: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    gap: 0.45rem;
+    width: fit-content;
+    max-width: min(78%, 460px);
+    letter-spacing: 0.15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .block-header i {
-    font-size: 1.1em;
+    font-size: 0.95em;
     opacity: 0.8;
+    flex: 0 0 auto;
+}
+
+.block-header .block-header-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.group-block.no-intersection-block {
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.group-block.no-intersection-block:hover {
+    transform: none;
+    border-color: var(--border-color-hover);
+    box-shadow: var(--shadow-md);
 }
 
 /* Unique Block (Belongs To) - Blue Theme */
 .unique-block {
-    border-left: 3px solid transparent;
-    background: rgba(122, 162, 247, 0.05);
+    border-left: none;
+    background: transparent;
 }
 
 .unique-block .block-header {
@@ -317,7 +339,7 @@ body[data-theme="light"] .preset-tag.selected {
 }
 
 body[data-theme="light"] .unique-block {
-    background: rgba(14, 165, 233, 0.05);
+    background: transparent;
     border-left-color: transparent;
 }
 
@@ -329,8 +351,8 @@ body[data-theme="light"] .unique-block .block-header {
 
 /* Intersection Block (Intersection) - Purple Theme */
 .intersection-block {
-    border-left: 3px solid transparent;
-    background: rgba(157, 124, 216, 0.05);
+    border-left: none;
+    background: transparent;
 }
 
 .intersection-block .block-header {
@@ -340,8 +362,12 @@ body[data-theme="light"] .unique-block .block-header {
 }
 
 body[data-theme="light"] .intersection-block {
-    background: rgba(139, 92, 246, 0.05);
+    background: transparent;
     border-left-color: transparent;
+}
+
+body[data-theme="light"] .group-block {
+    background-color: rgba(255, 255, 255, 0.5);
 }
 
 body[data-theme="light"] .intersection-block .block-header {
@@ -356,20 +382,21 @@ body[data-theme="light"] .intersection-block .block-header {
     width: calc(100% - 1rem);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);
-    background: rgba(0, 0, 0, 0.15);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
 }
 
 .group-block .mod-item:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-card-hover);
 }
 
 body[data-theme="light"] .group-block .mod-item {
     border-color: var(--border-color);
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--bg-card);
 }
 
 body[data-theme="light"] .group-block .mod-item:hover {
-    background: rgba(255, 255, 255, 0.8);
+    background: var(--bg-card-hover);
 }
 
 /* ========================================= */
@@ -452,29 +479,27 @@ body[data-theme="light"] .context-menu-item.danger:hover {
 
 /* Placeholder Styling */
 .drag-placeholder {
-    margin: 0.5rem 0;
+    margin: 0;
     border-radius: var(--border-radius-md, 4px);
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
     /* Ensure it doesn't interfere with drag events */
     box-sizing: border-box;
+    position: relative;
+    z-index: 100;
 }
 
 /* Specific style for Mod Item placeholder (Line indicator) */
-.drag-placeholder.mod-placeholder {
-    height: 4px;
-    background: var(--accent-blue, #7aa2f7);
-    border: none;
-    box-shadow: 0 0 8px rgba(122, 162, 247, 0.6);
-    opacity: 0.8;
-}
-
-/* Specific style for Group/Component placeholder (Box indicator) */
+.drag-placeholder.mod-placeholder,
 .drag-placeholder.group-placeholder {
-    height: 48px;
-    background-color: rgba(122, 162, 247, 0.08);
-    border: 2px dashed var(--accent-blue, #7aa2f7);
-    backdrop-filter: blur(2px);
+    /* Keep list spacing unchanged: placeholder has no own height */
+    height: 0;
+    margin-top: calc((var(--mod-list-gap, 0.9rem) * -1) / 2);
+    margin-bottom: calc((var(--mod-list-gap, 0.9rem) * -1) / 2);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    opacity: 1;
 }
 
 /* Animation for smooth entry */
@@ -495,8 +520,17 @@ body[data-theme="light"] .context-menu-item.danger:hover {
     }
 }
 
-.drag-placeholder.mod-placeholder {
-    animation: placeholderPulse 1.5s infinite ease-in-out;
+.drag-placeholder.mod-placeholder::before,
+.drag-placeholder.group-placeholder::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -1px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--accent-blue, #7aa2f7);
+    box-shadow: 0 0 8px rgba(122, 162, 247, 0.6);
 }
 
 /* Swap Target Styling */
@@ -504,8 +538,8 @@ body[data-theme="light"] .context-menu-item.danger:hover {
     border: 2px solid var(--accent-blue, #7aa2f7) !important;
     background-color: rgba(122, 162, 247, 0.15) !important;
     box-shadow: inset 0 0 10px rgba(122, 162, 247, 0.3) !important;
-    transform: scale(1.02);
-    transition: all 0.2s ease;
+    transform: none;
+    transition: border-color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 /* Custom Drag Ghost Styling */
