@@ -388,6 +388,13 @@ function findConflictsForMod(modName) {
 
 function createGroupComponentHTML(component) {
     const hasIntersection = component.blocks.some(block => block.type === 'intersection');
+    if (!hasIntersection) {
+        const modsHTML = component.blocks
+            .map(block => block.mods.map(mod => createModItemHTML(mod)).join(''))
+            .join('');
+        return `<div class="component-wrapper" draggable="${currentSortMethod === 'default' ? 'true' : 'false'}" data-component-id="${component.component_id}"><div class="component-header">${component.component_name}</div>${modsHTML}</div>`;
+    }
+
     const blocksHTML = component.blocks.map(block => {
         // 修复：确保组内 mod item 渲染时也能正确设置 priority 数据集
         const modsHTML = block.mods.map(mod => createModItemHTML(mod)).join('');
@@ -396,15 +403,9 @@ function createGroupComponentHTML(component) {
         let headerIcon = '';
 
         if (block.type === 'unique') {
-            if (hasIntersection) {
-                headerText = t('group.belongs_to', { parent: block.group_name });
-                blockClass = 'unique-block';
-                headerIcon = 'fa-folder';
-            } else {
-                // No intersection in this component: remove the blue "belongs to" frame.
-                headerText = '';
-                blockClass = 'no-intersection-block';
-            }
+            headerText = t('group.belongs_to', { parent: block.group_name });
+            blockClass = 'unique-block';
+            headerIcon = 'fa-folder';
         } else {
             const groupsText = (block.group_names || []).join(' / ');
             headerText = `${t('group.intersection')}: ${groupsText}`;
