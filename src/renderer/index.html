@@ -33,7 +33,7 @@
         })();
     </script>
     <!-- i18n: load utility first (synchronous), then inject locale script based on localStorage -->
-    <script src="js/i18n.js"></script>
+    <script src="js/i18n/i18n.js"></script>
     <script>
         // Load locale script synchronously before DOMContentLoaded
         (function () {
@@ -43,11 +43,11 @@
             // Set html lang attribute
             document.documentElement.lang = lang;
             // Write script tag so locale loads before DOMContentLoaded
-            document.write('<scr' + 'ipt src="js/locales/' + lang + '.js"></scr' + 'ipt>');
+            document.write('<scr' + 'ipt src="js/i18n/locales/' + lang + '.js"></scr' + 'ipt>');
         })();
     </script>
-    <script src="js/locales/extra.js"></script>
-    <script src="js/locales/ui-extra.js"></script>
+    <script src="js/i18n/locales/extra.js"></script>
+    <script src="js/i18n/locales/ui-extra.js"></script>
 </head>
 
 <body data-theme="tokyo-night">
@@ -1108,20 +1108,20 @@
 
     <!-- Load order is critical: -->
     <!-- 1. Base classes and configurations -->
-    <script src="js/game-config.js"></script>
-    <script src="js/ui-manager.js"></script>
+    <script src="js/core/game-config.js"></script>
+    <script src="js/ui/ui-manager.js"></script>
 
     <!-- 2. Core functionality (must load before core.js) -->
-    <script src="js/i18n.js"></script>
-    <script src="js/undo-manager.js"></script>
-    <script src="js/presets.js"></script>
-    <script src="js/mod-manager.js"></script>
-    <script src="js/ui-modals.js"></script>
-    <script src="js/ui-interactions.js"></script>
-    <script src="js/ui-preview-drag-and-drop.js"></script>
+    <script src="js/i18n/i18n.js"></script>
+    <script src="js/core/undo-manager.js"></script>
+    <script src="js/features/presets.js"></script>
+    <script src="js/features/mod-manager.js"></script>
+    <script src="js/ui/ui-modals.js"></script>
+    <script src="js/ui/ui-interactions.js"></script>
+    <script src="js/ui/ui-preview-drag-and-drop.js"></script>
 
     <!-- 3. Main initialization (loads last, sets up event listeners) -->
-    <script src="js/core.js"></script>
+    <script src="js/core/core.js"></script>
 
     <!-- 修复：补充下拉菜单的控制逻辑 -->
     <script>

@@ -3,6 +3,10 @@ const path = require('path');
 const fs = require('fs-extra');
 const Database = require('better-sqlite3');
 const { exec } = require('child_process');
+const { registerGameAndWindowHandlers } = require('./ipc/game-and-window');
+const { registerSettingsHandlers } = require('./ipc/settings');
+const { registerUiSystemHandlers } = require('./ipc/ui-system');
+const { registerPresetHandlers } = require('./ipc/presets');
 // 引入 adm-zip 用于处理 ZIP 压缩包
 let AdmZip;
 try {
@@ -65,6 +69,7 @@ let db;
 let mainWindow;
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 let activeGameId = 'StellarBlade'; // Default Global State
+let getGamesData = () => [];
 
 // --- New IPC Handler for Game Covers ---
 ipcMain.handle('save-game-cover', async (event, { gameName, sourcePath }) => {
@@ -1212,288 +1217,34 @@ app.on('window-all-closed', function () {
 // ================= IPC 处理程序 (API) =================
 
 // --- 窗口控制 ---
-ipcMain.handle('window-minimize', () => mainWindow.minimize());
-ipcMain.handle('window-maximize', () => {
-    if (mainWindow.isMaximized()) mainWindow.unmaximize();
-    else mainWindow.maximize();
+const gameAndWindowApi = registerGameAndWindowHandlers({
+    ipcMain,
+    dialog,
+    fs,
+    path,
+    getDb: () => db,
+    dataDir: DATA_DIR,
+    gameCoverDir: GAME_COVER_DIR,
+    stateFile: STATE_FILE,
+    rendererDir: path.join(__dirname, '../renderer'),
+    validateGameConfig,
+    ensureSettingsRow,
+    getMainWindow: () => mainWindow,
+    getActiveGameId: () => activeGameId,
+    setActiveGameId: (gameId) => { activeGameId = gameId; },
 });
-ipcMain.handle('window-close', () => mainWindow.close());
+getGamesData = gameAndWindowApi.getGamesData;
 
-// --- 游戏选择 ---
-
-
-ipcMain.handle('select-game', async (event, gameId) => {
-    const games = getGamesData();
-    const game = games.find(g => g.id === gameId);
-
-    if (game) {
-        activeGameId = gameId;
-        try {
-            fs.writeJsonSync(STATE_FILE, { activeGameId });
-        } catch (e) {
-            console.error('Failed to save state:', e);
-        }
-        mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
-        return { success: true };
-    }
-    return { success: false, message: 'Game not found' };
-});
-
-ipcMain.handle('get-active-game-id', () => {
-    return activeGameId;
+registerSettingsHandlers({
+    ipcMain,
+    BrowserWindow,
+    getDb: () => db,
+    getSettings,
+    getSettingsIdForGame,
+    ensureSettingsRow,
+    getActiveGameId: () => activeGameId,
 });
 
-ipcMain.handle('return-to-game-select', () => {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/game-selector.html'));
-});
-
-// --- Dynamic Game Data Handlers ---
-const GAMES_JSON_PATH = path.join(DATA_DIR, 'games.json');
-const GAME_JSON_DIR = path.join(DATA_DIR, 'game');
-fs.ensureDirSync(GAME_JSON_DIR);
-
-function migrateLegacyGamesData() {
-    if (fs.existsSync(GAMES_JSON_PATH)) {
-        try {
-            const legacyGames = fs.readJsonSync(GAMES_JSON_PATH);
-            legacyGames.forEach(game => {
-                const gamePath = path.join(GAME_JSON_DIR, `${game.id}.json`);
-                if (!fs.existsSync(gamePath)) {
-                    fs.outputJsonSync(gamePath, game, { spaces: 2 });
-                }
-            });
-            // Rename to backup so we don't migrate again
-            fs.renameSync(GAMES_JSON_PATH, path.join(DATA_DIR, 'games_backup.json'));
-        } catch (e) {
-            console.error("Failed to migrate legacy games.json", e);
-        }
-    }
-}
-
-function getGamesData() {
-    try {
-        migrateLegacyGamesData();
-
-        let games = [];
-
-        // Read all json files in GAME_JSON_DIR
-        const files = fs.readdirSync(GAME_JSON_DIR);
-        files.forEach(file => {
-            if (file.toLowerCase().endsWith('.json')) {
-                try {
-                    const gameData = fs.readJsonSync(path.join(GAME_JSON_DIR, file));
-                    // Schema 验证：确保必要字段存在且类型正确
-                    const validationErrors = validateGameConfig(gameData, file);
-                    if (validationErrors.length > 0) {
-                        validationErrors.forEach(err => console.error(`[GameConfig] 验证失败: ${err}`));
-                        // 跳过该配置，不加入列表
-                    } else {
-                        games.push(gameData);
-                    }
-                } catch (err) {
-                    console.error(`[GameConfig] 解析 JSON 失败: ${file}`, err.message);
-                }
-            }
-        });
-
-        // --- Dynamic Cover Image Loading ---
-        // Scan GAME_COVER_DIR for images matching game.name
-        if (fs.existsSync(GAME_COVER_DIR)) {
-            try {
-                const coverFiles = fs.readdirSync(GAME_COVER_DIR);
-                games.forEach(game => {
-                    const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-                    const matchingFile = coverFiles.find(file => {
-                        const parsed = path.parse(file);
-                        return parsed.name === game.name && validExtensions.includes(parsed.ext.toLowerCase());
-                    });
-                    if (matchingFile) {
-                        game.cover_image = path.join(GAME_COVER_DIR, matchingFile);
-                    }
-                });
-            } catch (err) {
-                console.error("Error scanning game cover directory:", err);
-            }
-        }
-
-        return games;
-    } catch (e) {
-        console.error("Failed to load games data:", e);
-        return [];
-    }
-}
-
-function sanitizeGameId(rawId) {
-    return String(rawId || '').trim().replace(/[^a-zA-Z0-9_-]/g, '');
-}
-
-function buildGameId(inputId, gameName) {
-    const normalizedInputId = sanitizeGameId(inputId);
-    if (normalizedInputId) return normalizedInputId;
-
-    const fromName = sanitizeGameId(String(gameName || '').replace(/\s+/g, ''));
-    if (fromName) return fromName;
-
-    return `Game${Date.now()}`;
-}
-
-function getNextSettingsId() {
-    const games = getGamesData();
-    const usedFromGameConfig = games
-        .map(g => Number(g.settings_id))
-        .filter(v => Number.isInteger(v) && v > 0);
-
-    const settingsMaxRow = db.prepare('SELECT MAX(id) as max_id FROM settings').get();
-    const maxFromSettingsTable = Number(settingsMaxRow?.max_id) || 0;
-    const maxUsed = Math.max(maxFromSettingsTable, ...usedFromGameConfig, 0);
-
-    return maxUsed + 1;
-}
-
-ipcMain.handle('get-games-list', () => {
-    return getGamesData();
-});
-
-ipcMain.handle('update-game-details', (event, { id, name, description, cover_image }) => {
-    try {
-        const gamePath = path.join(GAME_JSON_DIR, `${id}.json`);
-
-        let gameData = {};
-        if (fs.existsSync(gamePath)) {
-            gameData = fs.readJsonSync(gamePath);
-        } else {
-            // If the game JSON doesn't exist but somehow it's being updated, fall back to getting from array
-            const games = getGamesData();
-            const existing = games.find(g => g.id === id);
-            if (existing) {
-                gameData = existing;
-            } else {
-                return { success: false, message: 'Game not found' };
-            }
-        }
-
-        gameData.name = name;
-        gameData.description = description;
-        gameData.cover_image = cover_image;
-
-        fs.outputJsonSync(gamePath, gameData, { spaces: 2 });
-        return { success: true };
-    } catch (e) {
-        return { success: false, message: e.message };
-    }
-});
-
-ipcMain.handle('add-game', (event, { id, name, description, executable, cover_image }) => {
-    try {
-        const gameName = String(name || '').trim();
-        if (!gameName) {
-            return { success: false, message: 'Game name cannot be empty' };
-        }
-
-        const gameId = buildGameId(id, gameName);
-        if (!gameId) {
-            return { success: false, message: 'Invalid game ID' };
-        }
-
-        const existingGames = getGamesData();
-        const duplicated = existingGames.some(g => String(g.id).toLowerCase() === gameId.toLowerCase());
-        if (duplicated) {
-            return { success: false, message: `Game ID already exists: ${gameId}` };
-        }
-
-        const settingsId = getNextSettingsId();
-        const gameData = {
-            id: gameId,
-            name: gameName,
-            description: String(description || '').trim(),
-            cover_image: String(cover_image || '').trim(),
-            executable: String(executable || '').trim() || `${gameId}.exe`,
-            settings_id: settingsId,
-            displayName: gameName,
-            nexusUrl: '',
-            features: {
-                clothingList: false
-            },
-            uiConfig: {
-                windowTitle: `${gameName} Mod Manager`,
-                launchButtonText: 'Launch Game',
-                gamePathLabel: `${gameName} Game Root Directory:`
-            }
-        };
-
-        const validationErrors = validateGameConfig(gameData, `${gameId}.json`);
-        if (validationErrors.length > 0) {
-            return { success: false, message: validationErrors.join('; ') };
-        }
-
-        const gamePath = path.join(GAME_JSON_DIR, `${gameId}.json`);
-        fs.outputJsonSync(gamePath, gameData, { spaces: 2 });
-
-        ensureSettingsRow(settingsId);
-
-        return { success: true, game: gameData };
-    } catch (e) {
-        return { success: false, message: e.message };
-    }
-});
-
-ipcMain.handle('select-image-file', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-        title: '选择图片',
-        filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif', 'webp'] }],
-        properties: ['openFile']
-    });
-
-    if (!result.canceled && result.filePaths.length > 0) {
-        return { success: true, path: result.filePaths[0] };
-    }
-    return { success: false };
-});
-
-// --- 设置相关 ---
-ipcMain.handle('get-all-settings', () => {
-    return getSettings();
-});
-
-ipcMain.handle('save-all-settings', (event, settings) => {
-    try {
-        const id = getSettingsIdForGame(activeGameId);
-        ensureSettingsRow(id);
-
-        const stmt = db.prepare(`
-            UPDATE settings
-            SET mods_dir = ?, game_path = ?, nexus_download_dir = ?, background_images_dir = ?, background_image_name = ?, background_opacity = ?, background_blur = ?, theme = ?, color_preset = ?, foreground_transparency = ?, preview_delay = ?, preview_interval = ?, scroll_trigger_distance = ?
-            WHERE id = ?
-        `);
-        const info = stmt.run(
-            settings.mods_dir,
-            settings.game_path,
-            settings.nexus_download_dir || '',
-            settings.background_images_dir,
-            settings.background_image_name,
-            settings.background_opacity,
-            settings.background_blur,
-            settings.theme,
-            settings.color_preset,
-            settings.foreground_transparency !== undefined ? settings.foreground_transparency : 1.0,
-            settings.preview_delay !== undefined ? settings.preview_delay : 600,
-            settings.preview_interval !== undefined ? settings.preview_interval : 2000,
-            settings.scroll_trigger_distance !== undefined ? settings.scroll_trigger_distance : 100,
-            id
-        );
-
-        // 向所有打开的窗口广播设置更新事件
-        BrowserWindow.getAllWindows().forEach(win => {
-            win.webContents.send('settings-updated', settings);
-        });
-
-        return { success: info.changes > 0 };
-    } catch (e) {
-        return { success: false, message: e.message };
-    }
-});
-
-// --- Mod 数据获取 ---
 ipcMain.handle('get-mods-data', (event, filters) => {
     const settings = getSettings();
     if (!settings.mods_dir || !settings.active_mods_dir) {
@@ -2228,396 +1979,24 @@ ipcMain.handle('save-sub-mod-order', (event, { parentModName, order }) => {
 });
 
 // --- 图片处理 ---
-ipcMain.handle('list-background-images', () => {
-    const settings = getSettings();
-    if (!settings.background_images_dir) return [];
-    try {
-        if (!fs.existsSync(settings.background_images_dir)) return [];
-        return fs.readdirSync(settings.background_images_dir).filter(f => /\.(png|jpg|jpeg|gif|webp)$/i.test(f));
-    } catch (e) {
-        console.error("List background images error:", e);
-        return [];
-    }
+registerUiSystemHandlers({
+    ipcMain,
+    fs,
+    path,
+    shell,
+    exec,
+    getSettings,
+    getActiveGameId: () => activeGameId,
+    clothingImagesDir: CLOTHING_IMAGES_DIR,
+    tempDownloadsDir: TEMP_DOWNLOADS_DIR,
+    reactivateModPackageAsync,
+    getDisplayName,
 });
 
-ipcMain.handle('upload-background-image', async (event, filePath) => {
-    const settings = getSettings();
-    if (!settings.background_images_dir) return { success: false, message: '未设置背景图片目录' };
-
-    const filename = path.basename(filePath);
-    const dest = path.join(settings.background_images_dir, filename);
-
-    try {
-        fs.ensureDirSync(settings.background_images_dir);
-        fs.copySync(filePath, dest);
-        return { success: true, filename };
-    } catch (e) {
-        return { success: false, message: e.message };
-    }
+registerPresetHandlers({
+    ipcMain,
+    fs,
+    path,
+    presetsDir: PRESETS_DIR,
+    getActiveGameId: () => activeGameId,
 });
-
-ipcMain.handle('delete-background-image', (event, { filename }) => {
-    const settings = getSettings();
-    if (!settings.background_images_dir) return { success: false, message: '未设置目录' };
-
-    const target = path.join(settings.background_images_dir, filename);
-    try {
-        if (fs.existsSync(target)) {
-            fs.removeSync(target);
-            return { success: true };
-        } else {
-            return { success: false, message: '文件不存在' };
-        }
-    } catch (e) {
-        return { success: false, message: e.message };
-    }
-});
-
-ipcMain.handle('get-mod-preview-images', (event, modName) => {
-    const settings = getSettings();
-    const modPath = path.join(settings.mods_dir, modName);
-    if (!fs.existsSync(modPath)) return [];
-
-    return fs.readdirSync(modPath)
-        .filter(f => /\.(png|jpg|jpeg|gif|webp)$/i.test(f))
-        .map(f => ({
-            filename: f,
-            url: `media://${path.join(modPath, f)}`
-        }));
-});
-
-ipcMain.handle('add-mod-preview-image', (event, { modName, filePath }) => {
-    const settings = getSettings();
-    const modPath = path.join(settings.mods_dir, modName);
-    const filename = path.basename(filePath);
-    const dest = path.join(modPath, filename);
-
-    try {
-        if (!fs.existsSync(modPath)) return { success: false, message: 'Mod 路径不存在' };
-        fs.copySync(filePath, dest);
-        return { success: true };
-    } catch (e) {
-        return { success: false, message: e.message };
-    }
-});
-
-ipcMain.handle('delete-mod-preview-image', (event, { modName, filename }) => {
-    const settings = getSettings();
-    const target = path.join(settings.mods_dir, modName, filename);
-
-    try {
-        if (fs.existsSync(target)) fs.removeSync(target);
-        return { success: true };
-    } catch (e) {
-        return { success: false, message: e.message };
-    }
-});
-
-ipcMain.handle('list-clothing-images', () => {
-    try {
-        if (!fs.existsSync(CLOTHING_IMAGES_DIR)) return [];
-        const files = fs.readdirSync(CLOTHING_IMAGES_DIR).filter(f => /\.(png|jpg|jpeg|gif|webp|dds)$/i.test(f));
-        return files.map(filename => ({
-            name: path.parse(filename).name,
-            display_name: getDisplayName(path.parse(filename).name),
-            url: `media://${path.join(CLOTHING_IMAGES_DIR, filename)}`
-        }));
-    } catch (e) {
-        console.error("Error listing clothing images:", e);
-        return [];
-    }
-});
-
-// --- 其他功能 ---
-ipcMain.handle('launch-game', () => {
-    const settings = getSettings();
-    if (!settings.game_exe_path || !fs.existsSync(settings.game_exe_path)) {
-        return { success: false, message: '游戏路径无效。' };
-    }
-    shell.openPath(settings.game_exe_path);
-    return { success: true, message: '游戏启动中...' };
-});
-
-ipcMain.handle('open-folder', (event, args) => {
-    const settings = getSettings();
-    let target = '';
-
-    // Handle legacy calls (just in case) where args might be a string or null
-    if (typeof args === 'string' || args === null) {
-        target = args ? path.join(settings.mods_dir, args) : settings.mods_dir;
-    } else {
-        // Handle new object format
-        const { type, modName } = args || {};
-
-        if (type === 'active') {
-            if (!settings.active_mods_dir) {
-                return { success: false, message: '未设置游戏 Mod 文件夹路径。' };
-            }
-            target = settings.active_mods_dir;
-        } else if (type === 'temp_downloads') {
-            // New: Support opening temp downloads
-            target = TEMP_DOWNLOADS_DIR;
-        } else {
-            // Default to 'store' (storage mods_dir)
-            if (!settings.mods_dir) {
-                return { success: false, message: '未设置 Mod 存储文件夹路径。' };
-            }
-            target = modName ? path.join(settings.mods_dir, modName) : settings.mods_dir;
-        }
-    }
-
-    if (!target) return { success: false, message: '路径无效。' };
-
-    // Create directory if it doesn't exist (optional, but good for UX)
-    if (!fs.existsSync(target)) {
-        try {
-            fs.ensureDirSync(target);
-        } catch (e) {
-            return { success: false, message: `目录不存在且无法创建: ${target}` };
-        }
-    }
-
-    shell.openPath(target).then(error => {
-        if (error) console.error('Failed to open path:', error);
-    });
-
-    return { success: true };
-});
-
-ipcMain.handle('refresh-mods', async () => {
-    const settings = getSettings();
-    if (!fs.existsSync(settings.active_mods_dir)) return { success: true };
-
-    const activeMods = await fs.readdir(settings.active_mods_dir);
-
-    // Optimized: Parallelize refresh operations in batches
-    // This significantly speeds up the process compared to sequential execution
-    const concurrency = 20;
-    for (let i = 0; i < activeMods.length; i += concurrency) {
-        const batch = activeMods.slice(i, i + concurrency);
-        await Promise.all(batch.map(async mod => {
-            const modPath = path.join(settings.active_mods_dir, mod);
-            try {
-                const stats = await fs.lstat(modPath);
-                if (stats.isDirectory()) {
-                    await reactivateModPackageAsync(mod, settings);
-                }
-            } catch (e) {
-                console.error(`Failed to refresh mod ${mod}:`, e);
-                // Continue with other mods even if one fails
-            }
-        }));
-    }
-    return { success: true };
-});
-
-ipcMain.handle('auto-detect-paths', async () => {
-    // 助手函数：检测指定路径是否为有效的游戏目录
-    const checkPath = (dir) => {
-        try {
-            if (activeGameId === 'KCD2') {
-                if (fs.existsSync(path.join(dir, 'Bin', 'Win64MasterMasterSteamPGO', 'KingdomCome.exe'))) return true;
-            } else {
-                // Stellar Blade Logic (Default)
-                if (fs.existsSync(path.join(dir, 'SB.exe'))) return true;
-                if (fs.existsSync(path.join(dir, 'StellarBlade', 'SB.exe'))) return 'nested';
-            }
-        } catch (e) { }
-        return false;
-    };
-
-    // 1. 尝试通过注册表查找 Steam 路径
-    let steamPath = null;
-    if (process.platform === 'win32') {
-        try {
-            await new Promise((resolve) => {
-                exec('reg query "HKLM\\SOFTWARE\\Wow6432Node\\Valve\\Steam" /v InstallPath', (error, stdout) => {
-                    if (!error && stdout) {
-                        const match = stdout.match(/InstallPath\s+REG_SZ\s+(.*)/);
-                        if (match && match[1]) steamPath = match[1].trim();
-                    }
-                    resolve();
-                });
-            });
-        } catch (e) {
-            console.error('Registry check failed:', e);
-        }
-    }
-
-    // Determine Folder Name to search for based on Game
-    let targetFolderName = 'StellarBlade';
-    if (activeGameId === 'KCD2') {
-        targetFolderName = 'KingdomComeDeliverance2';
-    }
-
-    // 2. 如果找到了 Steam，检查库文件夹
-    if (steamPath) {
-        const potentialLibs = [steamPath]; // 包含 Steam 安装目录本身
-
-        // 解析 libraryfolders.vdf
-        const vdfPath = path.join(steamPath, 'steamapps', 'libraryfolders.vdf');
-        if (fs.existsSync(vdfPath)) {
-            try {
-                const vdfContent = fs.readFileSync(vdfPath, 'utf-8');
-                // 简单的正则匹配 "path" "..."
-                const pathMatches = [...vdfContent.matchAll(/"path"\s+"(.*)"/g)];
-                pathMatches.forEach(m => {
-                    if (m[1]) {
-                        // VDF 中的路径通常是反斜杠转义的，或者正斜杠
-                        let libPath = m[1].replace(/\\\\/g, '\\');
-                        if (!potentialLibs.includes(libPath)) potentialLibs.push(libPath);
-                    }
-                });
-            } catch (e) {
-                console.error('VDF parsing warning:', e);
-            }
-        }
-
-        // 遍历所有库
-        for (const lib of potentialLibs) {
-            const gameDir = path.join(lib, 'steamapps', 'common', targetFolderName);
-            const check = checkPath(gameDir);
-            if (check === true) return { success: true, game_path: gameDir };
-            if (check === 'nested') return { success: true, game_path: path.join(gameDir, targetFolderName) };
-        }
-    }
-
-    // 3. Fallback: 暴力扫描常见路径（保留原有逻辑作为兜底）
-    const drives = [];
-    if (process.platform === 'win32') {
-        for (let i = 67; i <= 90; i++) { // C to Z
-            drives.push(String.fromCharCode(i) + ':');
-        }
-    } else {
-        drives.push('/');
-    }
-
-    const commonPaths = [
-        `Program Files (x86)/Steam/steamapps/common/${targetFolderName}`,
-        `Steam/steamapps/common/${targetFolderName}`,
-        `SteamLibrary/steamapps/common/${targetFolderName}`,
-        `steamapps/common/${targetFolderName}`,
-        `Games/${targetFolderName}`,
-        targetFolderName
-    ];
-
-    for (const drive of drives) {
-        for (const p of commonPaths) {
-            const fullPath = path.join(drive, p);
-            const check = checkPath(fullPath);
-            if (check === true) return { success: true, game_path: fullPath };
-            if (check === 'nested') return { success: true, game_path: path.join(fullPath, targetFolderName) };
-        }
-    }
-
-
-
-    return { success: false };
-});
-
-// --- 预设功能 IPC Handlers ---
-
-ipcMain.handle('get-presets', async () => {
-    try {
-        const gamePresetDir = path.join(PRESETS_DIR, activeGameId);
-        await fs.ensureDir(gamePresetDir);
-
-        const files = await fs.readdir(gamePresetDir);
-        const presets = [];
-        for (const file of files) {
-            if (file.endsWith('.json')) {
-                try {
-                    const presetData = await fs.readJson(path.join(gamePresetDir, file));
-                    presets.push(presetData);
-                } catch (e) { /* ignore read error for single files */ }
-            }
-        }
-        // 按创建时间降序排序
-        return presets.sort((a, b) => b.created_at - a.created_at);
-    } catch (e) {
-        console.error('Failed to get presets:', e);
-        return [];
-    }
-});
-
-ipcMain.handle('save-preset', async (event, { name, color, activeMods, activeSubMods }) => {
-    try {
-        if (!name) return { success: false, message: '预设名称不能为空。' };
-
-        const gamePresetDir = path.join(PRESETS_DIR, activeGameId);
-        await fs.ensureDir(gamePresetDir);
-
-        const id = require('crypto').randomUUID();
-        const now = Date.now();
-        const presetPath = path.join(gamePresetDir, `${id}.json`);
-
-        const presetData = {
-            id: id,
-            name: name,
-            color: color || '#7aa2f7',
-            mods: activeMods || [],
-            sub_mods: activeSubMods || [],
-            created_at: now
-        };
-
-        await fs.writeJson(presetPath, presetData, { spaces: 2 });
-
-        return { success: true };
-    } catch (e) {
-        console.error('Failed to save preset:', e);
-        return { success: false, message: e.message };
-    }
-});
-
-ipcMain.handle('update-preset', async (event, { id, name, color }) => {
-    try {
-        if (!name) return { success: false, message: '预设名称不能为空。' };
-
-        const gamePresetDir = path.join(PRESETS_DIR, activeGameId);
-        const presetPath = path.join(gamePresetDir, `${id}.json`);
-
-        if (await fs.pathExists(presetPath)) {
-            const presetData = await fs.readJson(presetPath);
-            presetData.name = name;
-            presetData.color = color;
-            await fs.writeJson(presetPath, presetData, { spaces: 2 });
-            return { success: true };
-        } else {
-            return { success: false, message: '预设文件不存在' };
-        }
-    } catch (e) {
-        console.error('Failed to update preset:', e);
-        return { success: false, message: e.message };
-    }
-});
-
-ipcMain.handle('delete-preset', async (event, id) => {
-    try {
-        const gamePresetDir = path.join(PRESETS_DIR, activeGameId);
-        const presetPath = path.join(gamePresetDir, `${id}.json`);
-
-        if (await fs.pathExists(presetPath)) {
-            await fs.remove(presetPath);
-        }
-        return { success: true };
-    } catch (e) {
-        console.error('Failed to delete preset:', e);
-        return { success: false, message: e.message };
-    }
-});
-
-ipcMain.handle('get-preset-by-id', async (event, id) => {
-    try {
-        const gamePresetDir = path.join(PRESETS_DIR, activeGameId);
-        const presetPath = path.join(gamePresetDir, `${id}.json`);
-
-        if (await fs.pathExists(presetPath)) {
-            return await fs.readJson(presetPath);
-        }
-        return null;
-    } catch (e) {
-        console.error('Failed to get preset by id:', e);
-        return null;
-    }
-});
-

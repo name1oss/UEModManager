@@ -376,487 +376,6 @@ function addModsToSimilarGroup() {
     }, confirmButton);
 }
 
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'none';
-    if (['renameModal', 'batchTaggingModal', 'addSubModModal', 'similarModManagementModal', 'addToSimilarModGroupModal', 'editPreviewImageModal', 'modPreviewModal', 'addModsToGroupModal', 'clothingImageModal', 'downloadSelectionModal'].includes(modalId)) {
-        // Fix: Do NOT clear selections on close. Selections should only be cleared on SUCCESSFUL operations.
-        // clearAllSelections();
-    }
-    if (modalId === 'modPreviewModal') {
-        currentPreviewModImages = [];
-        currentPreviewImageIndex = 0;
-        const container = document.getElementById('modPreviewImagesContainer');
-        if (container) container.innerHTML = '';
-    }
-    if (modalId === 'fileConflictModal') {
-        const forceActivateBtn = document.getElementById('fileConflictModalForceActivateBtn');
-        if (forceActivateBtn) forceActivateBtn.classList.add('hidden');
-    }
-    if (modalId === 'editPreviewImageModal') {
-        const fileInput = document.getElementById('previewImageUploadInput');
-        if (fileInput) fileInput.value = '';
-        modNameForPreviewManagement = '';
-        document.getElementById('uploadPreviewBtn').style.display = 'none';
-        document.getElementById('selectedFileName').textContent = '';
-    }
-
-    // 下载模态框的清理
-    if (modalId === 'downloadSelectionModal') {
-        currentDownloadData = null;
-        const treeContainer = document.getElementById('downloadFileTree');
-        if (treeContainer) treeContainer.innerHTML = '';
-    }
-    hideLoadingOverlay();
-}
-
-function applyTagColors() {
-    const tagColorClasses = Array.from({ length: 6 }, (_, i) => `tag-color-${i}`); // Matches CSS 0-5
-    const tagColorMap = new Map();
-    let colorIndex = 0;
-    const getColorClass = (tagName) => {
-        if (!tagColorMap.has(tagName)) {
-            tagColorMap.set(tagName, tagColorClasses[colorIndex % tagColorClasses.length]);
-            colorIndex++;
-        }
-        return tagColorMap.get(tagName);
-    };
-    document.querySelectorAll('.tag[data-tag-name]').forEach(tagEl => {
-        // Clear previous color classes
-        tagColorClasses.forEach(c => tagEl.classList.remove(c));
-        tagEl.classList.add(getColorClass(tagEl.dataset.tagName));
-    });
-}
-
-function clearAllSelections() {
-    selectedModNames.clear();
-    updateAllVisualSelections();
-    updateSelectionDependentButtons();
-    lastCheckedMod = null;
-}
-
-
-
-function refreshAllMods() {
-    showConfirm('refresh.confirm.title', 'refresh.confirm.msg').then(confirmed => {
-        if (confirmed) {
-            // 设置加载提示文本为“刷新中...”
-            const loadingTextEl = document.querySelector('#loadingOverlay .loading-text');
-            const originalText = loadingTextEl ? loadingTextEl.textContent : t('loading.processing');
-            if (loadingTextEl) loadingTextEl.textContent = t('loading.refreshing');
-
-            // 传入 null 作为 buttonElement 以触发全局加载遮罩
-            callIPC('refresh-mods', {}, () => {
-                showToast('toast.refresh.success', 'success');
-                loadAndRenderModList();
-                refreshTagFilters();
-                // 恢复默认文本
-                if (loadingTextEl) loadingTextEl.textContent = t('loading.processing');
-            }, null);
-        }
-    });
-}
-
-// --- Appearance & Background Logic ---
-
-async function initializeAppearance() {
-    const settings = await ipcRenderer.invoke('get-all-settings');
-    // Default to 'dark' if undefined
-    currentTheme = settings.theme || 'dark';
-
-    currentSelectedBackgroundImage = settings.background_image_name || '';
-
-    // 修复：0 被视为 falsy 值导致 || 1.0 生效的问题
-    // 如果 settings.background_opacity 存在且不为 null，则使用该值，否则默认为 1.0
-    currentBackgroundOpacity = (settings.background_opacity !== undefined && settings.background_opacity !== null) ? settings.background_opacity : 1.0;
-
-    currentBackgroundBlur = settings.background_blur || 0.0;
-
-    // 初始化全局目录缓存
-    globalBgImagesDir = settings.background_images_dir || '';
-    // 记录初始路径
-    lastSavedBgImagesDir = globalBgImagesDir;
-
-    // Apply Theme
-    document.body.dataset.theme = currentTheme;
-
-    // Load Interaction Settings
-    if (settings.preview_delay !== undefined) PREVIEW_DELAY_MS = settings.preview_delay;
-    if (settings.preview_interval !== undefined) SLIDESHOW_INTERVAL_MS = settings.preview_interval;
-
-    // Load Scroll Settings
-    if (settings.scroll_trigger_distance !== undefined) window.SCROLL_ZONE_SIZE = parseInt(settings.scroll_trigger_distance, 10);
-    const scrollDistInput = document.getElementById('scrollTriggerDistanceInput');
-    if (scrollDistInput) {
-        scrollDistInput.value = window.SCROLL_ZONE_SIZE;
-        document.getElementById('scrollTriggerDistanceValue').textContent = window.SCROLL_ZONE_SIZE + 'px';
-    }
-
-    // Apply initial dynamic styles
-    applyDynamicStyles();
-
-    // Update Theme Select UI (Circular Options)
-    document.querySelectorAll('.theme-option').forEach(option => {
-        option.classList.remove('active');
-        if (option.dataset.theme === currentTheme) {
-            option.classList.add('active');
-        }
-    });
-
-    // Validating and Setting Background Opacity UI
-    const bgTransparency = Math.round((1 - currentBackgroundOpacity) * 100);
-    const bgOpacitySlider = document.getElementById('backgroundOpacity');
-    if (document.activeElement !== bgOpacitySlider) {
-        bgOpacitySlider.value = bgTransparency;
-    }
-    document.getElementById('opacityValue').textContent = `${bgTransparency}%`;
-
-    document.getElementById('backgroundBlur').value = currentBackgroundBlur;
-    document.getElementById('blurValue').textContent = `${currentBackgroundBlur}px`;
-
-    // Re-apply styles now that DOM is set
-    applyDynamicStyles();
-
-    // Ensure listeners are attached (idempotent, safe to call multiple times)
-    setupAppearanceControlListeners();
-}
-
-function setupAppearanceControlListeners() {
-    const opacitySlider = document.getElementById('backgroundOpacity');
-    const blurSlider = document.getElementById('backgroundBlur');
-    const fgSlider = document.getElementById('foregroundTransparency');
-    const opacityValueSpan = document.getElementById('opacityValue');
-    const blurValueSpan = document.getElementById('blurValue');
-    const fgValueSpan = document.getElementById('fgOpacityValue');
-
-    if (opacitySlider && opacityValueSpan) {
-        opacitySlider.oninput = function () {
-            opacityValueSpan.textContent = this.value + '%';
-            applyDynamicStyles();
-            saveSettingsOnChange();
-        };
-    }
-
-    if (blurSlider && blurValueSpan) {
-        blurSlider.oninput = function () {
-            blurValueSpan.textContent = this.value + 'px';
-            applyDynamicStyles();
-            saveSettingsOnChange();
-        };
-    }
-
-    // New Theme Select Listener (Circular Options)
-    document.querySelectorAll('.theme-option').forEach(option => {
-        option.addEventListener('click', () => {
-            // Update Active State Visuals
-            document.querySelectorAll('.theme-option').forEach(opt => opt.classList.remove('active'));
-            option.classList.add('active');
-
-            // Apply Theme
-            currentTheme = option.dataset.theme;
-            document.body.dataset.theme = currentTheme;
-            saveSettingsOnChange(true); // Pass true for silent save
-        });
-    });
-}
-
-async function loadBackgroundImages() {
-    const thumbnailsContainer = document.getElementById('backgroundImageThumbnails');
-    thumbnailsContainer.innerHTML = '<div style="grid-column:1/-1; display:flex; justify-content:center; padding:1rem;"><div class="simple-spinner"></div></div>';
-
-    const images = await ipcRenderer.invoke('list-background-images');
-    // 重新获取设置以确保路径正确
-    const settings = await ipcRenderer.invoke('get-all-settings');
-    const bgDir = settings.background_images_dir;
-    // 更新全局缓存
-    globalBgImagesDir = bgDir;
-
-    thumbnailsContainer.innerHTML = '';
-
-    // 1. Render "No Background" Option
-    const noBgThumbnail = document.createElement('div');
-    noBgThumbnail.className = 'thumbnail-item';
-    noBgThumbnail.innerHTML = `<div class="no-bg-placeholder"><i class="fas fa-ban"></i><span>${t('background.none')}</span></div>`;
-    noBgThumbnail.dataset.imageName = '';
-    if (currentSelectedBackgroundImage === '') noBgThumbnail.classList.add('selected');
-    noBgThumbnail.onclick = () => selectThumbnail('');
-    thumbnailsContainer.appendChild(noBgThumbnail);
-
-    // 2. Render Image List
-    if (images.length > 0) {
-        let scrollTarget = null;
-
-        images.forEach(imageName => {
-            const thumbnailItem = document.createElement('div');
-            thumbnailItem.className = 'thumbnail-item';
-            thumbnailItem.dataset.imageName = imageName;
-
-            const fullPath = formatLocalPathForUrl(path.join(bgDir, imageName));
-            const img = document.createElement('img');
-            img.alt = imageName;
-            img.src = fullPath; // Load directly
-            img.loading = "lazy";
-
-            // Image Load Handling
-            img.onload = () => {
-                // Ensure layout stability after load
-            };
-
-            img.onerror = () => {
-                thumbnailItem.innerHTML = `<div class="error-placeholder" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; font-size:0.8rem; color:var(--accent-red);"><i class="fas fa-exclamation-circle"></i><span>${t('background.load_failed')}</span></div>`;
-            };
-
-            thumbnailItem.appendChild(img);
-
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = imageName;
-            thumbnailItem.appendChild(nameSpan);
-
-            // Delete Button Overlay
-            const deleteBtn = document.createElement('div');
-            deleteBtn.className = 'delete-bg-btn';
-            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-            deleteBtn.title = t('background.delete.this');
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation(); // Stop bubble so we don't select the image
-                deleteBackgroundImage(imageName);
-            };
-            thumbnailItem.appendChild(deleteBtn);
-
-            // Selection Logic
-            if (imageName === currentSelectedBackgroundImage) {
-                thumbnailItem.classList.add('selected');
-                scrollTarget = thumbnailItem;
-            }
-
-            thumbnailItem.onclick = () => selectThumbnail(imageName);
-            thumbnailsContainer.appendChild(thumbnailItem);
-        });
-
-        // 3. Auto Scroll to Selected
-        if (scrollTarget) {
-            setTimeout(() => {
-                scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
-        }
-    }
-
-    // 标记加载完成
-    isBackgroundImagesLoaded = true;
-}
-
-async function deleteBackgroundImage(imageName) {
-    if (await showConfirm('background.delete.confirm.title', 'background.delete.confirm.msg', { name: imageName })) {
-        callIPC('delete-background-image', { filename: imageName }, (result) => {
-            if (result.success) {
-                showToast('background.delete.success', 'success');
-                // 如果删除的是当前选中的背景，重置为无背景
-                if (currentSelectedBackgroundImage === imageName) {
-                    clearBackgroundImage();
-                }
-                // 删除图片后，需要重新加载列表
-                isBackgroundImagesLoaded = false;
-                loadBackgroundImages();
-            } else {
-                showToast(result.message || t('background.delete.failed'), 'error');
-            }
-        });
-    }
-}
-
-function selectThumbnail(imageName) {
-    // 优化：如果选中的已经是当前背景，则不执行任何操作，防止闪烁
-    if (currentSelectedBackgroundImage === imageName) return;
-
-    document.querySelectorAll('.thumbnail-item').forEach(item => item.classList.remove('selected'));
-
-    // Find item by attribute to handle cases where DOM might have refreshed
-    const selectedThumbnail = document.querySelector(`.thumbnail-item[data-image-name="${CSS.escape(imageName)}"]`);
-    if (selectedThumbnail) selectedThumbnail.classList.add('selected');
-
-    currentSelectedBackgroundImage = imageName;
-    applyDynamicStyles();
-    saveSettingsOnChange();
-}
-
-function clearBackgroundImage() {
-    selectThumbnail('');
-}
-
-function applyDynamicStyles() {
-    const opacityInput = document.getElementById('backgroundOpacity');
-    const blurInput = document.getElementById('backgroundBlur');
-    if (!opacityInput || !blurInput) return;
-
-    // Background Opacity Logic
-    const bgTransparency = parseInt(opacityInput.value, 10);
-    const bgOpacity = 1 - (bgTransparency / 100);
-
-    const backgroundBlur = blurInput.value;
-
-    // Reset global CSS variables to handle theme changes (without foreground opacity override)
-    // Actually, if we just don't touch them, they stay as defined in CSS file.
-    // However, if we modified them before, we should probably reset them or just let CSS rules take over if we remove inline styles?
-    // But setting properties on documentElement overrides CSS. We need to reset them to null to let CSS take back control.
-    const root = document.documentElement;
-    root.style.removeProperty('--bg-glass-sidebar');
-    root.style.removeProperty('--bg-card');
-    root.style.removeProperty('--bg-glass-heavy');
-
-    let backgroundLayer = document.getElementById('fixed-background-layer');
-    if (backgroundLayer) {
-        if (currentSelectedBackgroundImage) {
-            // 使用全局缓存的目录，避免异步闪烁
-            if (globalBgImagesDir) {
-                const fullPath = formatLocalPathForUrl(path.join(globalBgImagesDir, currentSelectedBackgroundImage));
-                backgroundLayer.style.backgroundImage = `url("${fullPath}")`;
-            }
-            // 应用透明度
-            backgroundLayer.style.opacity = bgOpacity;
-        } else {
-            backgroundLayer.style.backgroundImage = 'none';
-            backgroundLayer.style.opacity = '0';
-        }
-        backgroundLayer.style.filter = `blur(${backgroundBlur}px)`;
-    }
-}
-
-async function openSettingsModal() {
-    const modal = document.getElementById('settingsModal');
-    const settings = await ipcRenderer.invoke('get-all-settings');
-
-    // Fill Paths
-    document.getElementById('mods_dir').value = settings.mods_dir || '';
-    document.getElementById('game_path').value = settings.game_path || '';
-    document.getElementById('nexus_download_dir').value = settings.nexus_download_dir || '';
-    document.getElementById('bg_images_dir').value = settings.background_images_dir || '';
-
-    // 更新全局状态，防止未打开设置时更改路径导致的同步问题
-    lastSavedBgImagesDir = settings.background_images_dir || '';
-    globalBgImagesDir = settings.background_images_dir || '';
-
-    // Setup listeners if not already there (using idempotency or simple reassignment)
-    ['mods_dir', 'game_path', 'nexus_download_dir', 'bg_images_dir'].forEach(id => {
-        const el = document.getElementById(id);
-        el.onchange = saveSettingsOnChange; // Simple assignment avoids duplicates
-    });
-
-    // Re-run initializeAppearance logic to ensure transparency slider and theme select are correct
-    await initializeAppearance();
-
-    // 为了防止标签切换导致的高度跳动，我们在打开时计算最大高度并固定
-    modal.style.display = 'flex';
-
-    // We no longer manually calculate and force a minHeight here
-    // because it causes the modal to be excessively tall on initial load.
-    // CSS Flexbox handles the modal tab heights smoothly now.
-
-    // Default open active tab or Paths
-    openSettingsTab(null, 'paths');
-
-    // Populate Interaction Settings Inputs
-    const delayInput = document.getElementById('previewDelayInput');
-    const intervalInput = document.getElementById('previewIntervalInput');
-    if (delayInput) {
-        delayInput.value = PREVIEW_DELAY_MS;
-        const valSpan = document.getElementById('previewDelayValue');
-        if (valSpan) valSpan.textContent = PREVIEW_DELAY_MS + 'ms';
-
-        delayInput.oninput = function () {
-            document.getElementById('previewDelayValue').textContent = this.value + 'ms';
-            // update global immediately for preview (save triggers on debounce)
-            PREVIEW_DELAY_MS = parseInt(this.value, 10);
-            saveSettingsOnChange();
-        };
-    }
-    if (intervalInput) {
-        intervalInput.value = SLIDESHOW_INTERVAL_MS;
-        const valSpan = document.getElementById('previewIntervalValue');
-        if (valSpan) valSpan.textContent = SLIDESHOW_INTERVAL_MS + 'ms';
-
-        intervalInput.oninput = function () {
-            document.getElementById('previewIntervalValue').textContent = this.value + 'ms';
-            SLIDESHOW_INTERVAL_MS = parseInt(this.value, 10);
-            saveSettingsOnChange();
-        };
-    }
-
-    // Populate Scroll Trigger Distance Input
-    const scrollDistInput = document.getElementById('scrollTriggerDistanceInput');
-    if (scrollDistInput) {
-        scrollDistInput.value = window.SCROLL_ZONE_SIZE;
-        const valSpan = document.getElementById('scrollTriggerDistanceValue');
-        if (valSpan) valSpan.textContent = window.SCROLL_ZONE_SIZE + 'px';
-
-        scrollDistInput.oninput = function () {
-            const newValue = parseInt(this.value, 10);
-            document.getElementById('scrollTriggerDistanceValue').textContent = newValue + 'px';
-            // Update global variable immediately so drag-scroll uses the new value
-            window.SCROLL_ZONE_SIZE = newValue;
-            saveSettingsOnChange();
-        };
-    }
-
-    // 优化：仅当背景图片列表尚未加载时才加载，避免每次打开闪烁
-    if (!isBackgroundImagesLoaded) {
-        loadBackgroundImages();
-    }
-}
-
-let saveSettingsDebounceTimer;
-function saveSettingsOnChange(silent = false) {
-    clearTimeout(saveSettingsDebounceTimer);
-    saveSettingsDebounceTimer = setTimeout(() => saveAllSettings(silent), 500);
-}
-
-function saveAllSettings(silent = false) {
-    const newBgDir = document.getElementById('bg_images_dir').value.trim();
-
-    // 转换透明度回不透明度进行保存
-    const transparency = parseInt(document.getElementById('backgroundOpacity').value, 10);
-    // Opacity = 1 - (Transparency / 100)
-    const opacityToSave = 1 - (transparency / 100);
-
-    // Interaction Settings
-    const previewDelay = parseInt(document.getElementById('previewDelayInput')?.value || 600, 10);
-    const previewInterval = parseInt(document.getElementById('previewIntervalInput')?.value || 2000, 10);
-
-    const payload = {
-        mods_dir: document.getElementById('mods_dir').value.trim(),
-        game_path: document.getElementById('game_path').value.trim(),
-        nexus_download_dir: document.getElementById('nexus_download_dir').value.trim(),
-        background_images_dir: newBgDir,
-        theme: currentTheme ? currentTheme : 'dark',
-        color_preset: 'default', // Keep for DB compatibility
-        background_image_name: currentSelectedBackgroundImage,
-        background_opacity: opacityToSave,
-        background_blur: document.getElementById('backgroundBlur').value,
-        foreground_transparency: (1 - (parseInt(document.getElementById('foregroundTransparency')?.value || 0, 10) / 100)),
-        preview_delay: previewDelay,
-        preview_interval: previewInterval,
-        scroll_trigger_distance: parseInt(document.getElementById('scrollTriggerDistanceInput')?.value || 100, 10)
-    };
-    callIPC('save-all-settings', payload, (result) => {
-        if (result.success) {
-            if (!silent) {
-                showToast('toast.settings.save.success', 'success', 2000);
-            }
-            initializeAppearance();
-            loadAndRenderModList();
-
-            // 检查背景图片目录是否发生了变化
-            // 如果变化了，我们需要重置加载状态并刷新列表
-            if (newBgDir !== lastSavedBgImagesDir) {
-                lastSavedBgImagesDir = newBgDir;
-                globalBgImagesDir = newBgDir; // Update global cache
-                isBackgroundImagesLoaded = false;
-                loadBackgroundImages();
-            }
-        } else {
-            showToast(result.message || t('toast.settings.save.fail'), 'error');
-        }
-    }, null, silent);
-}
 
 let tagFilterDataSignature = '';
 
@@ -1015,7 +534,7 @@ function renderClothingImages(images) {
     }
     noResultsMsg.style.display = 'none';
 
-    // 1. 排序：确保列表按文件名排序，这样数字部分可以发挥排序作用
+    // 1. 鎺掑簭锛氱‘淇濆垪琛ㄦ寜鏂囦欢鍚嶆帓搴忥紝杩欐牱鏁板瓧閮ㄥ垎鍙互鍙戞尌鎺掑簭浣滅敤
     const sortedImages = [...images].sort((a, b) => {
         return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
     });
@@ -1047,7 +566,7 @@ function renderClothingImages(images) {
                 </div>
             `;
 
-            // 添加点击事件：搜索该服装
+            // 娣诲姞鐐瑰嚮浜嬩欢锛氭悳绱㈣鏈嶈
             item.onclick = () => {
                 closeModal('clothingImageModal');
                 const searchInput = document.getElementById('searchInput');
@@ -1062,15 +581,14 @@ function renderClothingImages(images) {
             ${hoverInfoHTML}
         `;
 
-        // 右键点击复制英文名称
+        // 鍙抽敭鐐瑰嚮澶嶅埗鑻辨枃鍚嶇О
         item.oncontextmenu = (e) => {
             e.preventDefault();
 
             const textToCopy = meta?.lookupEntry?.en ? meta.lookupEntry.en : cleanDisplayName;
 
             copyToClipboard(textToCopy);
-            // 既然是复制英文名称，可以提示一下
-            // showToast(`已复制: ${textToCopy}`, 'success'); // copyToClipboard 内部已有提示
+            // 鏃㈢劧鏄鍒惰嫳鏂囧悕绉帮紝鍙互鎻愮ず涓€涓?            // showToast(`宸插鍒? ${textToCopy}`, 'success'); // copyToClipboard 鍐呴儴宸叉湁鎻愮ず
         };
 
         fragment.appendChild(item);
@@ -1083,21 +601,21 @@ window.filterClothingImages = function () {
     ensureClothingSearchCaches();
     const query = document.getElementById('clothingSearchInput').value.trim().toLowerCase();
 
-    // 优化：空查询直接显示所有
+    // Empty query returns full list
     if (!query) {
         renderClothingImages(allClothingImages);
         return;
     }
 
     const filtered = clothingIndexedMetas.filter(meta => {
-        // 1. 基础匹配：文件名或显示名
+        // 1. 鍩虹鍖归厤锛氭枃浠跺悕鎴栨樉绀哄悕
         if (meta.lowerName.includes(query) || meta.lowerDisplay.includes(query) || meta.lowerCleanDisplay.includes(query)) {
             return true;
         }
 
-        // 2. 增强匹配：查表匹配英文/中文
+        // 2. 澧炲己鍖归厤锛氭煡琛ㄥ尮閰嶈嫳鏂?涓枃
         if (meta.lookupEntry) {
-            // 如果在表中找到了，检查查询词是否匹配该条目的英文或中文
+            // Match both localized names from lookup map
             return String(meta.lookupEntry.en || '').toLowerCase().includes(query)
                 || String(meta.lookupEntry.cn || '').toLowerCase().includes(query);
         }
@@ -1183,29 +701,29 @@ async function showModPreviewModal(modName) {
     const modal = document.getElementById('modPreviewModal');
     const modalContent = modal.querySelector('.modal-content');
 
-    // 切换到画廊模式样式
+    // 鍒囨崲鍒扮敾寤婃ā寮忔牱寮?
     modalContent.classList.add('gallery-view');
-    modalContent.classList.remove('wide'); // 移除普通宽模式
-    modalContent.style.textAlign = ''; // 清除内联样式
+    modalContent.classList.remove('wide'); // 绉婚櫎鏅€氬妯″紡
+    modalContent.style.textAlign = ''; // 娓呴櫎鍐呰仈鏍峰紡
 
     const mod = globalModDetails.find(m => m.name === modName) || allSubModDetails.find(s => s.name === modName);
 
-    // 隐藏标题，因为画廊模式下我们不需要顶部标题占据空间
+    // 闅愯棌鏍囬锛屽洜涓虹敾寤婃ā寮忎笅鎴戜滑涓嶉渶瑕侀《閮ㄦ爣棰樺崰鎹┖闂?
     document.getElementById('modPreviewTitle').style.display = 'none';
 
     const imagesContainer = document.getElementById('modPreviewImagesContainer');
     imagesContainer.innerHTML = '';
-    imagesContainer.className = 'mod-preview-images-container gallery-container'; // 添加画廊容器类
+    imagesContainer.className = 'mod-preview-images-container gallery-container'; // 娣诲姞鐢诲粖瀹瑰櫒绫?
 
     document.getElementById('loadingSpinner').style.display = 'block';
     document.getElementById('noPreviewImageMessage').style.display = 'none';
     document.getElementById('previewErrorMessage').style.display = 'none';
 
-    // 隐藏旧的控制栏，改用覆盖式按钮
+    // 闅愯棌鏃х殑鎺у埗鏍忥紝鏀圭敤瑕嗙洊寮忔寜閽?
     const oldControls = modal.querySelector('.carousel-controls');
     if (oldControls) oldControls.style.display = 'none';
 
-    // 确保有覆盖式导航按钮和计数器
+    // 纭繚鏈夎鐩栧紡瀵艰埅鎸夐挳鍜岃鏁板櫒
     let prevBtn = modal.querySelector('.gallery-nav-btn.prev');
     let nextBtn = modal.querySelector('.gallery-nav-btn.next');
     let counter = modal.querySelector('.gallery-counter');
@@ -1244,12 +762,12 @@ async function showModPreviewModal(modName) {
                 const img = document.createElement('img');
                 img.src = imageUrl;
                 img.draggable = false;
-                // img.alt ... 保持简洁
+                // img.alt ... 淇濇寔绠€娲?
                 if (index === 0) img.classList.add('active');
                 imagesContainer.appendChild(img);
             });
 
-            // 预加载
+            // 棰勫姞杞?
             if (images.length > 1) {
                 const img1 = new Image(); img1.src = currentPreviewModImages[1];
                 const imgLast = new Image(); imgLast.src = currentPreviewModImages[currentPreviewModImages.length - 1];
@@ -1278,7 +796,7 @@ function updateGalleryUI() {
 
     if (images.length === 0) return;
 
-    // 隐藏所有，显示当前
+    // 闅愯棌鎵€鏈夛紝鏄剧ず褰撳墠
     images.forEach(img => img.classList.remove('active'));
     if (images[currentPreviewImageIndex]) {
         images[currentPreviewImageIndex].classList.add('active');
@@ -1304,7 +822,7 @@ function showPreviousPreviewImage() {
     updateGalleryUI();
 }
 
-// 辅助函数：当关闭模态框时重置样式（可选，如果复用模态框的话）
+// 杈呭姪鍑芥暟锛氬綋鍏抽棴妯℃€佹鏃堕噸缃牱寮忥紙鍙€夛紝濡傛灉澶嶇敤妯℃€佹鐨勮瘽锛?
 function resetPreviewModalStyle() {
     const modalContent = document.querySelector('#modPreviewModal .modal-content');
     if (modalContent) {
@@ -1314,14 +832,14 @@ function resetPreviewModalStyle() {
         const oldControls = document.querySelector('#modPreviewModal .carousel-controls');
         if (oldControls) oldControls.style.display = '';
 
-        // 移除动态添加的按钮
+        // 绉婚櫎鍔ㄦ€佹坊鍔犵殑鎸夐挳
         modalContent.querySelectorAll('.gallery-nav-btn, .gallery-counter').forEach(el => el.remove());
     }
 }
 
-// 需要在 closeModal 中调用，或者专门监听关闭事件
-// 为了简单起见，我们在 showModPreviewModal 开头做了重置/设置，这里只需确保关闭逻辑正常即可。
-// 现有的 window.closeModal 只切换 display:none，所以下次打开时仍需重新初始化。
+// 闇€瑕佸湪 closeModal 涓皟鐢紝鎴栬€呬笓闂ㄧ洃鍚叧闂簨浠?
+// 涓轰簡绠€鍗曡捣瑙侊紝鎴戜滑鍦?showModPreviewModal 寮€澶村仛浜嗛噸缃?璁剧疆锛岃繖閲屽彧闇€纭繚鍏抽棴閫昏緫姝ｅ父鍗冲彲銆?
+// 鐜版湁鐨?window.closeModal 鍙垏鎹?display:none锛屾墍浠ヤ笅娆℃墦寮€鏃朵粛闇€閲嶆柊鍒濆鍖栥€?
 
 
 function launchGame() {
@@ -1363,7 +881,7 @@ function openNexusDownloadsFolder() {
 function normalize_string(s) {
     if (typeof s !== 'string') return '';
     s = s.replace(/^\d+[_\- ]*/, '');
-    return s.replace(/[（）() ]/g, '').toLowerCase();
+    return s.replace(/[锛堬級() ]/g, '').toLowerCase();
 }
 
 function showLoadingOverlay() {
@@ -1416,8 +934,8 @@ async function handleContextMenu(e) {
         return;
     }
 
-    // 如果已经有打开的菜单且是同一个item，不做处理或者重新打开？
-    // 这里简单处理：先关闭旧的（会清理旧的listeners），再打开新的
+    // 濡傛灉宸茬粡鏈夋墦寮€鐨勮彍鍗曚笖鏄悓涓€涓猧tem锛屼笉鍋氬鐞嗘垨鑰呴噸鏂版墦寮€锛?
+    // 杩欓噷绠€鍗曞鐞嗭細鍏堝叧闂棫鐨勶紙浼氭竻鐞嗘棫鐨刲isteners锛夛紝鍐嶆墦寮€鏂扮殑
     hideContextMenu();
 
     e.preventDefault();
@@ -1604,31 +1122,31 @@ function updatePreviewPosition(e) {
         }
 
         const e = lastMouseEvent;
-        // 偏移量，防止鼠标遮挡
+        // 鍋忕Щ閲忥紝闃叉榧犳爣閬尅
         const offset = 20;
         let top = e.clientY + offset;
         let left = e.clientX + offset;
 
-        // 边界检查：防止预览图超出屏幕右侧或底部
+        // 杈圭晫妫€鏌ワ細闃叉棰勮鍥捐秴鍑哄睆骞曞彸渚ф垨搴曢儴
         const rect = container.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
-        // 如果右边缘超出视口，向左移动
+        // 濡傛灉鍙宠竟缂樿秴鍑鸿鍙ｏ紝鍚戝乏绉诲姩
         if (left + rect.width > viewportWidth) {
             left = e.clientX - rect.width - offset;
         }
 
-        // 如果下边缘超出视口，向上移动
+        // 濡傛灉涓嬭竟缂樿秴鍑鸿鍙ｏ紝鍚戜笂绉诲姩
         if (top + rect.height > viewportHeight) {
             top = e.clientY - rect.height - offset;
         }
 
-        // 防止左/上边缘溢出
+        // 闃叉宸?涓婅竟缂樻孩鍑?
         if (left < 0) left = offset;
         if (top < 0) top = offset;
 
-        // 应用位置
+        // 搴旂敤浣嶇疆
         container.style.transform = `translate(${left}px, ${top}px)`;
         // Reset top/left to 0 as we use transform now for better performance
         container.style.top = '0';
@@ -1710,11 +1228,11 @@ window.handleContextMenuAction = function (action, modName, isSubMod = false, pa
 function updateModPriority(modName, newPriority, isSubMod, parentModName) {
     callIPC('update-priority', { modName, priority: newPriority }, (result) => {
         if (result.success) {
-            // 使用 IPC 返回的新名称 (result.newName) 来确保提示信息是正确的
-            // 修正：在修改优先级成功后，确保清除所有选中状态，避免旧的 modName 干扰后续操作。
+            // 浣跨敤 IPC 杩斿洖鐨勬柊鍚嶇О (result.newName) 鏉ョ‘淇濇彁绀轰俊鎭槸姝ｇ‘鐨?
+            // 淇锛氬湪淇敼浼樺厛绾ф垚鍔熷悗锛岀‘淇濇竻闄ゆ墍鏈夐€変腑鐘舵€侊紝閬垮厤鏃х殑 modName 骞叉壈鍚庣画鎿嶄綔銆?
             showToast('mod.priority.update.success', 'success', 3000, { name: result.newName || modName, priority: newPriority });
 
-            // 确保强制重新加载列表，因为优先级改变涉及 Mod 文件夹名称的重命名
+            // 纭繚寮哄埗閲嶆柊鍔犺浇鍒楄〃锛屽洜涓轰紭鍏堢骇鏀瑰彉娑夊強 Mod 鏂囦欢澶瑰悕绉扮殑閲嶅懡鍚?
             loadAndRenderModList();
             clearAllSelections();
         } else {
@@ -1908,95 +1426,12 @@ function confirmAddModsToGroup() {
     }, confirmButton);
 }
 
-window.openSettingsTab = function (evt, tabName) {
-    let i, tabcontent, tablinks;
-    tabcontent = document.getElementsByClassName("settings-tab-content");
-    for (i = 0; i < tabcontent.length; i++) {
-        tabcontent[i].classList.remove("active");
-    }
-    tablinks = document.getElementsByClassName("settings-tab-button");
-    for (i = 0; i < tablinks.length; i++) {
-        tablinks[i].classList.remove("active");
-    }
-    document.getElementById(tabName).classList.add("active");
-    if (evt) evt.currentTarget.classList.add("active");
-    else document.querySelector(`.settings-tab-button[onclick*="'${tabName}'"]`)?.classList.add('active');
-}
-
-async function checkGamePathValidity() {
-    const settings = await ipcRenderer.invoke('get-all-settings');
-    const config = window.gameManager && window.gameManager.getActiveGameConfig();
-
-    // Use game-specific validation if available, otherwise fallback to generic check
-    const isValid = config && typeof config.validatePaths === 'function'
-        ? config.validatePaths(settings)
-        : (settings.game_path && settings.mods_dir);
-
-    if (!isValid) {
-        openSettingsModal();
-    }
-}
-
-function autoDetectGamePath() {
-    const config = window.gameManager && window.gameManager.getActiveGameConfig();
-    if (!config) {
-        showToast('game.path.auto_detect.config_missing', 'error');
-        return;
-    }
-
-    config.autoDetectPath().then((result) => {
-        if (result.success) {
-            document.getElementById('game_path').value = result.game_path;
-            showToast('game.path.auto_detect.success', 'success');
-            saveSettingsOnChange(); // Defined in ui-modals.js usually, ensure availability
-        } else {
-            showToast('game.path.auto_detect.failed', 'warning', 0);
-            openSettingsModal();
-            openSettingsTab(null, 'paths');
-        }
-    }).catch(err => {
-        console.error("Auto detect path error:", err);
-        showToast('game.path.auto_detect.error', 'error', 3000, { message: err.message });
-    });
-}
-
-function selectDirectory(inputId, title) {
-    callIPC('select-directory', title, (result) => {
-        if (result.success) {
-            const inputElement = document.getElementById(inputId);
-            inputElement.value = result.path;
-            inputElement.dispatchEvent(new Event('change'));
-        }
-    });
-}
-
-function handleNewBackgroundImageSelect(event) {
-    const fileInput = event.target;
-    if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        callIPC('upload-background-image', file.path, (result) => {
-            if (result.success) {
-                showToast('background.upload.success', 'success', 3000, { name: result.filename });
-                // Refresh list and select the new one
-                isBackgroundImagesLoaded = false;
-                loadBackgroundImages().then(() => {
-                    selectThumbnail(result.filename);
-                });
-            } else {
-                showToast(result.message || t('background.upload.failed'), 'error');
-            }
-            // CRITICAL: Reset input value so same file can be selected again if user deletes and re-uploads
-            fileInput.value = '';
-        });
-    }
-}
-
 // Drag & Drop
 function initializeDragAndDrop() {
     const modList = document.querySelector('.mod-list');
     const scrollContainer = document.querySelector('.mod-list-scroll-area');
 
-    // 调用外部文件拖拽初始化
+    // 璋冪敤澶栭儴鏂囦欢鎷栨嫿鍒濆鍖?
     setupExternalFileDrop();
 
     if (!modList || !scrollContainer) return;
@@ -2025,13 +1460,13 @@ function initializeDragAndDrop() {
     document.addEventListener('dragend', handleDragEnd);
 }
 
-// 新增：外部文件拖拽处理
+// 鏂板锛氬閮ㄦ枃浠舵嫋鎷藉鐞?
 let isExternalDropInitialized = false;
 function setupExternalFileDrop() {
     if (isExternalDropInitialized) return;
     isExternalDropInitialized = true;
 
-    // 创建拖拽遮罩层
+    // 鍒涘缓鎷栨嫿閬僵灞?
     let overlay = document.getElementById('external-drop-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -2054,7 +1489,7 @@ function setupExternalFileDrop() {
     let dragCounter = 0;
 
     window.addEventListener('dragenter', (e) => {
-        // 忽略内部拖拽 (如果是内部拖拽，draggedItems 会有内容)
+        // 蹇界暐鍐呴儴鎷栨嫿 (濡傛灉鏄唴閮ㄦ嫋鎷斤紝draggedItems 浼氭湁鍐呭)
         if (draggedItems && draggedItems.length > 0) return;
         if (!e.dataTransfer.types.includes('Files')) return;
 
@@ -2095,8 +1530,8 @@ function setupExternalFileDrop() {
         dragCounter = 0;
         overlay.style.display = 'none';
 
-        // 获取拖入的文件/文件夹路径
-        // 注意：e.dataTransfer.files 在 Electron 中包含 'path' 属性
+        // 鑾峰彇鎷栧叆鐨勬枃浠?鏂囦欢澶硅矾寰?
+        // 娉ㄦ剰锛歟.dataTransfer.files 鍦?Electron 涓寘鍚?'path' 灞炴€?
         const files = Array.from(e.dataTransfer.files).map(f => f.path);
 
         if (files.length > 0) {
@@ -2216,9 +1651,9 @@ function handleDragOver(e) {
     if (target && !draggedItems.includes(target)) {
         const rect = target.getBoundingClientRect();
 
-        // 分成三部分：上半部分（向上挤）、中间部分（交换）、下半部分（向下挤）
+        // 鍒嗘垚涓夐儴鍒嗭細涓婂崐閮ㄥ垎锛堝悜涓婃尋锛夈€佷腑闂撮儴鍒嗭紙浜ゆ崲锛夈€佷笅鍗婇儴鍒嗭紙鍚戜笅鎸わ級
         const y = e.clientY - rect.top;
-        const threshold = rect.height * 0.25; // 边缘 25% 认为是插入
+        const threshold = rect.height * 0.25; // 杈圭紭 25% 璁や负鏄彃鍏?
 
         const isDropBefore = y < threshold;
         const isDropAfter = y > rect.height - threshold;
@@ -2227,11 +1662,11 @@ function handleDragOver(e) {
         const existingPlaceholder = document.getElementById('drag-placeholder');
 
         if (isSwap) {
-            // 交换模式：高亮目标元素，隐藏占位符
+            // 浜ゆ崲妯″紡锛氶珮浜洰鏍囧厓绱狅紝闅愯棌鍗犱綅绗?
             target.classList.add('swap-target');
             if (existingPlaceholder) existingPlaceholder.style.display = 'none';
         } else {
-            // 插入模式
+            // 鎻掑叆妯″紡
             if (!existingPlaceholder) {
                 const placeholder = document.createElement('div');
                 placeholder.id = 'drag-placeholder';
@@ -2250,7 +1685,7 @@ function handleDragOver(e) {
                 }
             } else {
                 existingPlaceholder.style.display = '';
-                // 只有位置确实改变时才移动 placeholder
+                // 鍙湁浣嶇疆纭疄鏀瑰彉鏃舵墠绉诲姩 placeholder
                 if (isDropBefore && existingPlaceholder.nextElementSibling !== target) {
                     target.parentNode.insertBefore(existingPlaceholder, target);
                 } else if (isDropAfter && existingPlaceholder.previousElementSibling !== target) {
@@ -2276,21 +1711,21 @@ function handleDrop(e) {
     if (swapTarget) {
         const parent = swapTarget.parentNode;
 
-        // 如果互换，我们应该先记录被拖拽元素原来的位置
+        // 濡傛灉浜掓崲锛屾垜浠簲璇ュ厛璁板綍琚嫋鎷藉厓绱犲師鏉ョ殑浣嶇疆
         if (draggedItems.length === 1 && swapTarget !== draggedItems[0]) {
-            // 互换两个独立的 DOM 节点
+            // 浜掓崲涓や釜鐙珛鐨?DOM 鑺傜偣
             const dragHolder = document.createElement('div');
-            // 占住拖动元素原位置
+            // 鍗犱綇鎷栧姩鍏冪礌鍘熶綅缃?
             parent.insertBefore(dragHolder, draggedItems[0]);
 
-            // 交换
+            // 浜ゆ崲
             parent.insertBefore(draggedItems[0], swapTarget);
             parent.insertBefore(swapTarget, dragHolder);
 
-            // 移除占位
+            // 绉婚櫎鍗犱綅
             dragHolder.remove();
         } else {
-            // 如果是多选拖拽互换，简单实现：将被拖动项放到目标位置之前，目标保持原位（等同于插入）
+            // 濡傛灉鏄閫夋嫋鎷戒簰鎹紝绠€鍗曞疄鐜帮細灏嗚鎷栧姩椤规斁鍒扮洰鏍囦綅缃箣鍓嶏紝鐩爣淇濇寔鍘熶綅锛堢瓑鍚屼簬鎻掑叆锛?
             draggedItems.forEach(item => parent.insertBefore(item, swapTarget));
         }
 
@@ -2298,7 +1733,7 @@ function handleDrop(e) {
         if (placeholder) placeholder.remove();
         saveModOrder();
     } else if (placeholder) {
-        // 正常插入逻辑
+        // 姝ｅ父鎻掑叆閫昏緫
         draggedItems.forEach(item => placeholder.parentNode.insertBefore(item, placeholder));
         placeholder.remove();
         saveModOrder();
@@ -2669,57 +2104,57 @@ function applyClientSideSorting(items, sortMethod) {
 // -----------------------------------------------------------
 function updatePreviewPosition(e) {
     const container = document.getElementById('modPreviewContainer');
-    // 如果元素不存在或不可见，则不更新
+    // 濡傛灉鍏冪礌涓嶅瓨鍦ㄦ垨涓嶅彲瑙侊紝鍒欎笉鏇存柊
     if (!container || !container.classList.contains('visible')) return;
 
-    // 偏移量，防止鼠标遮挡
+    // 鍋忕Щ閲忥紝闃叉榧犳爣閬尅
     const offset = 20;
     let top = e.clientY + offset;
     let left = e.clientX + offset;
 
-    // 边界检查：防止预览图超出屏幕右侧或底部
+    // 杈圭晫妫€鏌ワ細闃叉棰勮鍥捐秴鍑哄睆骞曞彸渚ф垨搴曢儴
     const rect = container.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // 如果右边缘超出视口，向左移动
+    // 濡傛灉鍙宠竟缂樿秴鍑鸿鍙ｏ紝鍚戝乏绉诲姩
     if (left + rect.width > viewportWidth) {
         left = e.clientX - rect.width - offset;
     }
 
-    // 如果下边缘超出视口，向上移动
+    // 濡傛灉涓嬭竟缂樿秴鍑鸿鍙ｏ紝鍚戜笂绉诲姩
     if (top + rect.height > viewportHeight) {
         top = e.clientY - rect.height - offset;
     }
 
-    // 防止左/上边缘溢出
+    // 闃叉宸?涓婅竟缂樻孩鍑?
     if (left < 0) left = offset;
     if (top < 0) top = offset;
 
-    // 应用位置
+    // 搴旂敤浣嶇疆
     container.style.top = `${top}px`;
     container.style.left = `${left}px`;
 }
 
 // Obsolete applyBatchTags removed
-// The correct implementation is in js/mod-manager.js using the new Tag Cloud system.
+// The correct implementation is in js/features/mod-manager.js using the new Tag Cloud system.
 
-// 导出函数
+// 瀵煎嚭鍑芥暟
 window.confirmToggleGroupConflict = confirmToggleGroupConflict;
 
 // ==========================================================================
-// DOWNLOAD & INSTALLATION LOGIC (下载与安装逻辑)
+// DOWNLOAD & INSTALLATION LOGIC (涓嬭浇涓庡畨瑁呴€昏緫)
 // ==========================================================================
 
 let currentDownloadData = null;
 
 /**
- * 打开下载文件所在位置
+ * 鎵撳紑涓嬭浇鏂囦欢鎵€鍦ㄤ綅缃?
  */
 function openDownloadLocation() {
     const { shell } = require('electron');
     if (currentDownloadData && currentDownloadData.tempPath) {
-        // 在文件管理器中显示文件
+        // 鍦ㄦ枃浠剁鐞嗗櫒涓樉绀烘枃浠?
         shell.showItemInFolder(currentDownloadData.tempPath);
     } else {
         showToast('download.path.not_found', 'error');
@@ -2728,62 +2163,62 @@ function openDownloadLocation() {
 window.openDownloadLocation = openDownloadLocation;
 
 /**
- * 打开下载文件选择模态框
+ * 鎵撳紑涓嬭浇鏂囦欢閫夋嫨妯℃€佹
  * @param {Object} data - { tempPath, originalFilename, entries: [{path, name, isDirectory, size}] }
  */
 function openDownloadSelectionModal(data) {
-    // 确保依赖引入 (如果文件头部未引入)
+    // 纭繚渚濊禆寮曞叆 (濡傛灉鏂囦欢澶撮儴鏈紩鍏?
     const { ipcRenderer } = require('electron');
 
     currentDownloadData = data;
     const modal = document.getElementById('downloadSelectionModal');
 
-    // 设置文件名显示
+    // 璁剧疆鏂囦欢鍚嶆樉绀?
     const fileNameEl = document.getElementById('downloadedFileName');
     if (fileNameEl) fileNameEl.textContent = data.originalFilename;
 
-    // 设置默认 Mod 名称 (去除扩展名)
+    // 璁剧疆榛樿 Mod 鍚嶇О (鍘婚櫎鎵╁睍鍚?
     const nameWithoutExt = data.originalFilename.replace(/\.[^/.]+$/, "");
     const nameInput = document.getElementById('installModName');
     if (nameInput) nameInput.value = nameWithoutExt;
 
-    // 重置选项状态
+    // 閲嶇疆閫夐」鐘舵€?
     const newGroupCheckbox = document.getElementById('installAsNewModGroup');
     const nameInputContainer = document.getElementById('newModNameInputContainer');
 
     if (newGroupCheckbox) {
-        newGroupCheckbox.checked = true; // 默认作为新 Mod，防止意外覆盖
-        // 绑定切换事件
+        newGroupCheckbox.checked = true; // 榛樿浣滀负鏂?Mod锛岄槻姝㈡剰澶栬鐩?
+        // 缁戝畾鍒囨崲浜嬩欢
         newGroupCheckbox.onchange = (e) => {
             if (nameInputContainer) {
                 nameInputContainer.style.display = e.target.checked ? 'block' : 'none';
             }
         };
-        // 触发一次以设置初始状态
+        // 瑙﹀彂涓€娆′互璁剧疆鍒濆鐘舵€?
         newGroupCheckbox.dispatchEvent(new Event('change'));
     }
 
-    // 渲染文件树
+    // 娓叉煋鏂囦欢鏍?
     renderDownloadFileTree(data.entries);
 
-    // 显示模态框
+    // 鏄剧ず妯℃€佹
     if (modal) modal.style.display = 'flex';
 }
 window.openDownloadSelectionModal = openDownloadSelectionModal;
 
 /**
- * 分析文件夹结构，确定哪些文件夹可以选择
+ * 鍒嗘瀽鏂囦欢澶圭粨鏋勶紝纭畾鍝簺鏂囦欢澶瑰彲浠ラ€夋嫨
  */
 function analyzeFolders(entries) {
     const path = require('path');
     const folders = {};
 
-    // 初始化所有文件夹
+    // 鍒濆鍖栨墍鏈夋枃浠跺す
     entries.forEach(entry => {
         const normalizedPath = entry.path.replace(/\\/g, '/');
 
         if (entry.isDirectory) {
-            // 初始化文件夹
+            // 鍒濆鍖栨枃浠跺す
             if (!folders[normalizedPath]) {
                 folders[normalizedPath] = {
                     hasPak: false,
@@ -2793,10 +2228,10 @@ function analyzeFolders(entries) {
                 };
             }
         } else {
-            // 处理文件
+            // 澶勭悊鏂囦欢
             const dir = path.dirname(normalizedPath).replace(/\\/g, '/');
 
-            // 初始化文件所在的文件夹
+            // 鍒濆鍖栨枃浠舵墍鍦ㄧ殑鏂囦欢澶?
             if (!folders[dir]) {
                 folders[dir] = {
                     hasPak: false,
@@ -2806,7 +2241,7 @@ function analyzeFolders(entries) {
                 };
             }
 
-            // 记录文件
+            // 璁板綍鏂囦欢
             folders[dir].files.push(entry);
             if (entry.name.toLowerCase().endsWith('.pak')) {
                 folders[dir].hasPak = true;
@@ -2814,13 +2249,13 @@ function analyzeFolders(entries) {
         }
     });
 
-    // 标记包含子文件夹的文件夹
+    // 鏍囪鍖呭惈瀛愭枃浠跺す鐨勬枃浠跺す
     Object.keys(folders).forEach(folderPath => {
         if (folderPath === '.' || folderPath === '') return;
 
         const parentDir = path.dirname(folderPath).replace(/\\/g, '/');
 
-        // 如果父目录存在，标记它包含子文件夹
+        // 濡傛灉鐖剁洰褰曞瓨鍦紝鏍囪瀹冨寘鍚瓙鏂囦欢澶?
         if (folders[parentDir]) {
             folders[parentDir].hasSubfolders = true;
         }
@@ -2830,7 +2265,7 @@ function analyzeFolders(entries) {
 }
 
 /**
- * 渲染文件树结构（文件夹选择模式）
+ * 娓叉煋鏂囦欢鏍戠粨鏋勶紙鏂囦欢澶归€夋嫨妯″紡锛?
  * @param {Array} entries - zip entries list
  */
 function renderDownloadFileTree(entries) {
@@ -2838,13 +2273,13 @@ function renderDownloadFileTree(entries) {
     if (!container) return;
     container.innerHTML = '';
 
-    // 分析文件夹结构
+    // 鍒嗘瀽鏂囦欢澶圭粨鏋?
     const folderAnalysis = analyzeFolders(entries);
 
-    // 1. 构建树形数据结构
+    // 1. 鏋勫缓鏍戝舰鏁版嵁缁撴瀯
     const tree = {};
     entries.forEach(entry => {
-        // 统一路径分隔符
+        // 缁熶竴璺緞鍒嗛殧绗?
         const normalizedPath = entry.path.replace(/\\/g, '/');
         const parts = normalizedPath.split('/').filter(p => p);
 
@@ -2864,7 +2299,7 @@ function renderDownloadFileTree(entries) {
         });
     });
 
-    // 2. 递归生成 HTML
+    // 2. 閫掑綊鐢熸垚 HTML
     function createTreeHTML(nodeObj, parentPath = '') {
         const ul = document.createElement('ul');
         ul.className = 'file-tree-list';
@@ -2886,7 +2321,7 @@ function renderDownloadFileTree(entries) {
             const iconColor = node.isFile ? 'var(--text-secondary)' : 'var(--accent-yellow)';
 
             if (node.isFile) {
-                // 文件：只显示，不显示复选框
+                // 鏂囦欢锛氬彧鏄剧ず锛屼笉鏄剧ず澶嶉€夋
                 const sizeInfo = `<span class="file-size" style="color:var(--text-disabled); font-size:0.85em; margin-left:8px;">(${formatBytes(node.originalEntry.size)})</span>`;
                 const isPak = node.name.toLowerCase().endsWith('.pak');
                 const pakBadge = isPak ? '<span class="pak-badge" style="background:var(--accent-green);color:#fff;font-size:0.7em;padding:2px 6px;border-radius:4px;margin-left:8px;">PAK</span>' : '';
@@ -2901,11 +2336,11 @@ function renderDownloadFileTree(entries) {
                     </div>
                 `;
             } else {
-                // 文件夹：检查是否可选
-                // 对于根级别的文件夹，需要特殊处理
+                // 鏂囦欢澶癸細妫€鏌ユ槸鍚﹀彲閫?
+                // 瀵逛簬鏍圭骇鍒殑鏂囦欢澶癸紝闇€瑕佺壒娈婂鐞?
                 let folderInfo;
                 if (!node.path || node.path === '' || !node.path.includes('/')) {
-                    // 这是根级别的文件夹，检查该文件夹本身的信息
+                    // 杩欐槸鏍圭骇鍒殑鏂囦欢澶癸紝妫€鏌ヨ鏂囦欢澶规湰韬殑淇℃伅
                     folderInfo = folderAnalysis[node.path] || { hasPak: false, hasSubfolders: false };
                 } else {
                     folderInfo = folderAnalysis[node.path] || { hasPak: false, hasSubfolders: false };
@@ -2914,7 +2349,7 @@ function renderDownloadFileTree(entries) {
                 const canSelect = folderInfo.hasPak && !folderInfo.hasSubfolders;
 
                 if (canSelect) {
-                    // 可选择的文件夹
+                    // 鍙€夋嫨鐨勬枃浠跺す
                     const checkboxId = `folder-check-${node.path.replace(/[^a-zA-Z0-9]/g, '_')}`;
                     li.innerHTML = `
                         <div class="tree-row selectable-folder" style="display:flex; align-items:center; padding:4px 0; background:rgba(158, 206, 106, 0.05); border-radius:4px; padding-left:4px;">
@@ -2930,7 +2365,7 @@ function renderDownloadFileTree(entries) {
                         </div>
                     `;
                 } else {
-                    // 不可选择的文件夹
+                    // 涓嶅彲閫夋嫨鐨勬枃浠跺す
                     const reason = !folderInfo.hasPak ? `<span class="hint" style="color:var(--text-disabled);font-size:0.8em;margin-left:8px;">${t('download.tree.no_pak')}</span>` :
                         folderInfo.hasSubfolders ? `<span class="hint" style="color:var(--text-disabled);font-size:0.8em;margin-left:8px;">${t('download.tree.contains_subfolders')}</span>` : '';
 
@@ -2947,14 +2382,14 @@ function renderDownloadFileTree(entries) {
                 }
             }
 
-            // 如果有子节点，递归生成
+            // 濡傛灉鏈夊瓙鑺傜偣锛岄€掑綊鐢熸垚
             if (hasChildren) {
                 const childrenContainer = createTreeHTML(node.children, node.path);
                 childrenContainer.style.display = 'none';
                 childrenContainer.style.paddingLeft = '22px';
                 li.appendChild(childrenContainer);
 
-                // 绑定折叠/展开事件
+                // 缁戝畾鎶樺彔/灞曞紑浜嬩欢
                 const toggleBtn = li.querySelector('.tree-toggle');
                 if (toggleBtn) {
                     toggleBtn.onclick = (e) => {
@@ -2981,13 +2416,13 @@ function renderDownloadFileTree(entries) {
 
     container.appendChild(createTreeHTML(tree));
 
-    // 特殊处理：如果根目录有文件，添加一个虚拟的"根文件夹"选项
+    // 鐗规畩澶勭悊锛氬鏋滄牴鐩綍鏈夋枃浠讹紝娣诲姞涓€涓櫄鎷熺殑"鏍规枃浠跺す"閫夐」
     const rootFiles = entries.filter(e => !e.isDirectory && !e.path.includes('/') && !e.path.includes('\\'));
     if (rootFiles.length > 0) {
         const hasRootPak = rootFiles.some(f => f.name.toLowerCase().endsWith('.pak'));
 
         if (hasRootPak) {
-            // 在树的最前面插入一个虚拟的根文件夹选项
+            // 鍦ㄦ爲鐨勬渶鍓嶉潰鎻掑叆涓€涓櫄鎷熺殑鏍规枃浠跺す閫夐」
             const rootOption = document.createElement('div');
             rootOption.style.cssText = 'margin-bottom:12px; padding:8px; background:rgba(158, 206, 106, 0.1); border:2px solid var(--accent-green); border-radius:8px;';
             rootOption.innerHTML = `
@@ -3007,7 +2442,7 @@ function renderDownloadFileTree(entries) {
         }
     }
 
-    // 自动展开根目录
+    // 鑷姩灞曞紑鏍圭洰褰?
     const rootUl = container.querySelector('.file-tree-list');
     if (rootUl && rootUl.children.length < 10) {
         Array.from(rootUl.children).forEach(li => {
@@ -3019,27 +2454,27 @@ function renderDownloadFileTree(entries) {
 window.handleFileTreeCheckbox = handleFileTreeCheckbox;
 
 /**
- * 处理树形结构中的复选框联动
+ * 澶勭悊鏍戝舰缁撴瀯涓殑澶嶉€夋鑱斿姩
  */
 function handleFileTreeCheckbox(checkbox) {
     const li = checkbox.closest('li');
     const isChecked = checkbox.checked;
 
-    // 1. 向下联动：选中/取消选中所有子孙节点
-    // 找到该 li 下面直接包含的 ul (子列表)
-    // 注意：createTreeHTML 结构是 li -> div(row) + ul(children)
-    // 我们需要查找该 li 内部的所有 checkbox
+    // 1. 鍚戜笅鑱斿姩锛氶€変腑/鍙栨秷閫変腑鎵€鏈夊瓙瀛欒妭鐐?
+    // 鎵惧埌璇?li 涓嬮潰鐩存帴鍖呭惈鐨?ul (瀛愬垪琛?
+    // 娉ㄦ剰锛歝reateTreeHTML 缁撴瀯鏄?li -> div(row) + ul(children)
+    // 鎴戜滑闇€瑕佹煡鎵捐 li 鍐呴儴鐨勬墍鏈?checkbox
 
-    // 获取该节点下的所有子容器
+    // 鑾峰彇璇ヨ妭鐐逛笅鐨勬墍鏈夊瓙瀹瑰櫒
     const childrenContainer = li.querySelector('ul.file-tree-list');
     if (childrenContainer) {
         const childCheckboxes = childrenContainer.querySelectorAll('input[type="checkbox"]');
         childCheckboxes.forEach(cb => cb.checked = isChecked);
     }
 
-    // 2. (可选) 向上联动：如果同级全选，则父级选中；否则父级取消选中
-    // 为了简化逻辑和用户自由度，这里暂不强制向上联动，
-    // 因为用户可能只想解压文件夹里的某一个文件而不选文件夹本身(逻辑上文件夹只是路径)
+    // 2. (鍙€? 鍚戜笂鑱斿姩锛氬鏋滃悓绾у叏閫夛紝鍒欑埗绾ч€変腑锛涘惁鍒欑埗绾у彇娑堥€変腑
+    // 涓轰簡绠€鍖栭€昏緫鍜岀敤鎴疯嚜鐢卞害锛岃繖閲屾殏涓嶅己鍒跺悜涓婅仈鍔紝
+    // 鍥犱负鐢ㄦ埛鍙兘鍙兂瑙ｅ帇鏂囦欢澶归噷鐨勬煇涓€涓枃浠惰€屼笉閫夋枃浠跺す鏈韩(閫昏緫涓婃枃浠跺す鍙槸璺緞)
 }
 
 function formatBytes(bytes, decimals = 2) {
@@ -3052,13 +2487,13 @@ function formatBytes(bytes, decimals = 2) {
 }
 
 /**
- * 确认安装下载
+ * 纭瀹夎涓嬭浇
  */
 async function confirmInstallDownload() {
     const { ipcRenderer } = require('electron');
     if (!currentDownloadData) return;
 
-    // 获取所有选中的文件夹
+    // 鑾峰彇鎵€鏈夐€変腑鐨勬枃浠跺す
     const selectedFolders = document.querySelectorAll('.folder-checkbox:checked');
 
     if (selectedFolders.length === 0) {
@@ -3066,21 +2501,21 @@ async function confirmInstallDownload() {
         return;
     }
 
-    // 收集选中文件夹中的所有文件
+    // 鏀堕泦閫変腑鏂囦欢澶逛腑鐨勬墍鏈夋枃浠?
     const selectedEntries = [];
     selectedFolders.forEach(checkbox => {
         const folderPath = checkbox.dataset.path;
 
-        // 找到该文件夹下的所有文件（包括子文件）
+        // 鎵惧埌璇ユ枃浠跺す涓嬬殑鎵€鏈夋枃浠讹紙鍖呮嫭瀛愭枃浠讹級
         const filesInFolder = currentDownloadData.entries.filter(entry => {
             const entryPath = entry.path.replace(/\\/g, '/');
 
-            // 如果是根文件夹（路径为 '.' 或空），匹配所有不在子文件夹中的文件
+            // 濡傛灉鏄牴鏂囦欢澶癸紙璺緞涓?'.' 鎴栫┖锛夛紝鍖归厤鎵€鏈変笉鍦ㄥ瓙鏂囦欢澶逛腑鐨勬枃浠?
             if (folderPath === '.' || folderPath === '') {
                 return !entry.isDirectory && !entryPath.includes('/');
             }
 
-            // 否则匹配该文件夹下的所有文件
+            // 鍚﹀垯鍖归厤璇ユ枃浠跺す涓嬬殑鎵€鏈夋枃浠?
             return entryPath.startsWith(folderPath + '/') && !entry.isDirectory;
         });
         selectedEntries.push(...filesInFolder.map(f => f.path));
@@ -3091,16 +2526,16 @@ async function confirmInstallDownload() {
         return;
     }
 
-    // 获取 Mod 名称
+    // 鑾峰彇 Mod 鍚嶇О
     const installAsNew = document.getElementById('installAsNewModGroup').checked;
-    let modName = currentDownloadData.originalFilename.replace(/\.[^/.]+$/, ""); // 默认使用文件名
+    let modName = currentDownloadData.originalFilename.replace(/\.[^/.]+$/, ""); // 榛樿浣跨敤鏂囦欢鍚?
 
     if (installAsNew) {
         const customName = document.getElementById('installModName').value.trim();
         if (customName) modName = customName;
     }
 
-    // UI 加载状态
+    // UI 鍔犺浇鐘舵€?
     const confirmBtn = document.querySelector('#downloadSelectionModal button[onclick="confirmInstallDownload()"]');
     const originalText = confirmBtn.innerHTML;
     confirmBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> ${t('download.install.installing')}`;
@@ -3134,7 +2569,6 @@ async function confirmInstallDownload() {
     }
 }
 window.confirmInstallDownload = confirmInstallDownload;
-window.closeModal = closeModal;
 window.applyBatchTags = applyBatchTags;
 window.createSimilarModGroup = createSimilarModGroup;
 window.deleteSimilarModGroup = deleteSimilarModGroup;
@@ -3148,12 +2582,8 @@ window.confirmAddModsToGroup = confirmAddModsToGroup;
 window.confirmAddSubModRelation = confirmAddSubModRelation;
 window.handleNewPreviewImageSelect = handleNewPreviewImageSelect;
 window.uploadPreviewImage = uploadPreviewImage;
-window.handleNewBackgroundImageSelect = handleNewBackgroundImageSelect;
-window.loadBackgroundImages = loadBackgroundImages;
-window.clearBackgroundImage = clearBackgroundImage;
 window.openAddSubModModal = openAddSubModModal;
 window.openSimilarModManagementModal = openSimilarModManagementModal;
-window.openSettingsModal = openSettingsModal;
 
 // Game Switching Logic
 const switchGameBtn = document.getElementById('switchGameBtn');

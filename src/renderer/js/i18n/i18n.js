@@ -78,7 +78,7 @@
         const lang = getCurrentLang();
         // The locale file sets window.__LOCALE_DATA__
         const script = document.createElement('script');
-        script.src = `js/locales/${lang}.js`;
+        script.src = `js/i18n/locales/${lang}.js`;
         // Synchronous load: append to <head> — since this runs in <head>
         // before DOMContentLoaded, the script won't execute until it loads.
         // We use document.write-like approach: append and let browser handle.

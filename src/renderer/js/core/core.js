@@ -814,20 +814,7 @@ function setupModListEventListeners() {
 }
 
 // --- Functions that remain in core.js and are called elsewhere ---
-
-function refreshAllMods() {
-    // refreshAllMods relies on showConfirm and loadAndRenderModList from mod-manager.js
-    // and callIPC, showToast from core.js. It remains here to encapsulate the high-level refresh logic.
-    showConfirm('refresh.confirm.title', 'refresh.confirm.msg').then(confirmed => {
-        if (confirmed) {
-            callIPC('refresh-mods', {}, () => {
-                showToast('toast.refresh.success', 'success');
-                loadAndRenderModList();
-                refreshTagFilters();
-            }, document.getElementById('refreshModsBtn'));
-        }
-    });
-}
+// `refreshAllMods` now lives in `js/ui/ui-modals.js`.
 
 async function addModFolder() {
     // addModFolder relies on callIPC, showToast from core.js and loadAndRenderModList, refreshTagFilters from mod-manager.js

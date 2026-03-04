@@ -6,7 +6,9 @@
   "scripts": {
     "start": "chcp 65001 && electron .",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "migrate": "node scripts/migrate.js",
+    "build:backup": "scripts\\build_and_backup.bat"
   },
   "author": "Your Name",
   "license": "MIT",
@@ -35,6 +37,8 @@
       "assets/**/*",
       "!dist/*",
       "!data/*",
+      "!backup_code/**/*",
+      "!scripts/**/*",
       "!**/*.py"
     ],
     "win": {

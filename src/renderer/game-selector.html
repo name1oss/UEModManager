@@ -11,18 +11,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="css/style.css">
-    <script src="js/i18n.js"></script>
+    <script src="js/i18n/i18n.js"></script>
     <script>
         (function () {
             var lang = localStorage.getItem('app_language') || 'zh-CN';
             var supported = ['zh-CN', 'en', 'ja'];
             if (!supported.includes(lang)) lang = 'zh-CN';
             document.documentElement.lang = lang;
-            document.write('<scr' + 'ipt src="js/locales/' + lang + '.js"></scr' + 'ipt>');
+            document.write('<scr' + 'ipt src="js/i18n/locales/' + lang + '.js"></scr' + 'ipt>');
         })();
     </script>
-    <script src="js/locales/extra.js"></script>
-    <script src="js/locales/ui-extra.js"></script>
+    <script src="js/i18n/locales/extra.js"></script>
+    <script src="js/i18n/locales/ui-extra.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
@@ -973,7 +973,7 @@
             </div>
         </div>
 
-        <script src="js/game-selector.js"></script>
+        <script src="js/features/game-selector.js"></script>
     </body>
 
 </html>

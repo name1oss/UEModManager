@@ -68,6 +68,7 @@ npm run dist
 ```text
 src/main/         Electron 主进程
 src/renderer/     渲染进程页面、样式与前端逻辑
+scripts/          工程脚本（迁移、构建备份等）
 data/             运行时数据（数据库、游戏配置、封面、预设等）
 dist/             打包输出
 ```
@@ -106,7 +107,12 @@ dist/             打包输出
 - 入口文件：`src/main/main.js`
 - 渲染主页面：`src/renderer/index.html`
 - 游戏选择页：`src/renderer/game-selector.html`
-- 本地化文件：`src/renderer/js/locales/*.js`
+- 渲染层脚本分层：
+  - `src/renderer/js/core/*`（初始化/核心能力）
+  - `src/renderer/js/features/*`（业务功能）
+  - `src/renderer/js/ui/*`（UI 交互）
+  - `src/renderer/js/i18n/*`（国际化与语言包）
+- 本地化文件：`src/renderer/js/i18n/locales/*.js`
 
 ### 常用脚本
 
@@ -114,6 +120,8 @@ dist/             打包输出
 npm start   # 本地运行
 npm run pack
 npm run dist
+npm run migrate
+npm run build:backup
 ```
 
 ## 常见问题
