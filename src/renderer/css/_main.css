@@ -693,15 +693,19 @@ body[data-theme="light"] .sub-mod-item:hover {
     gap: 1rem;
 }
 
-/* Make sure inner elements of component-wrapper don't interfere with drop targeting */
+/* Connected Tab Display Box for Mod Groups */
 .component-wrapper {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    margin-bottom: 0.6rem;
+    background: rgba(36, 40, 59, 0.4);
+    border: 1px solid var(--border-color);
+    border-radius: 0 var(--border-radius-md) var(--border-radius-md) var(--border-radius-md);
+    margin-top: 2.2rem;
+    margin-bottom: 1.2rem;
+    padding: 0.6rem 0.4rem;
     overflow: visible;
     display: flex;
     flex-direction: column;
+    position: relative;
+    box-shadow: var(--shadow-sm);
 }
 
 body.is-dragging .component-wrapper * {
@@ -709,35 +713,43 @@ body.is-dragging .component-wrapper * {
 }
 
 body[data-theme="light"] .component-wrapper {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(148, 163, 184, 0.3);
 }
 
 .component-header {
-    align-self: flex-start;
+    position: absolute;
+    top: -30px;
+    left: -1px;
+    height: 31px;
+    line-height: 29px;
+    box-sizing: border-box;
+    
     display: inline-flex;
     max-width: calc(100% - 1rem);
-    background: rgba(20, 21, 30, 0.72);
-    padding: 0.42rem 0.95rem;
+    background: var(--bg-dark-2);
+    padding: 0 1.2rem;
     font-weight: 700;
     color: var(--accent-blue);
     font-size: 1.02rem;
     border: 1px solid var(--border-color);
     border-bottom: none;
-    border-radius: 10px 10px 0 0;
+    border-radius: 8px 8px 0 0;
     align-items: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     text-transform: none;
     letter-spacing: 0.2px;
-    margin-left: 0.35rem;
+    z-index: 2;
 }
 
 body[data-theme="light"] .component-header {
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--bg-dark-2);
+    border-color: rgba(148, 163, 184, 0.3);
 }
 
-.component-wrapper .mod-item {
+.component-wrapper > .mod-item {
     margin: 4px;
     width: calc(100% - 8px);
     border-radius: var(--border-radius-md);
