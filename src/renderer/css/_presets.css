@@ -274,8 +274,8 @@ body[data-theme="light"] .preset-tag.selected {
     background-color: rgba(20, 21, 30, 0.3);
     border: 1px solid var(--border-color);
     border-radius: 0 var(--border-radius-md) var(--border-radius-md) var(--border-radius-md);
-    margin: 2.7rem 0.5rem 0.8rem 0.5rem;
-    padding: 0.8rem 0.4rem 0.4rem 0.4rem;
+    margin: 2.2rem 0.5rem 0.8rem 0.5rem;
+    padding: 1.2rem 0.4rem 0.4rem 0.4rem;
     box-shadow: var(--shadow-sm);
     transition: all 0.2s ease;
     position: relative;
@@ -288,10 +288,10 @@ body[data-theme="light"] .preset-tag.selected {
 
 .block-header {
     position: absolute;
-    top: -29px;
-    left: -1px;
-    height: 30px;
-    line-height: 28px;
+    top: -30px; /* Aligns exactly with the top border (1px border offset) */
+    left: -1px; /* Aligns exactly with the left border (1px border offset) */
+    height: 32px; /* Stretch down 1 more px to make sure the bottom border masks fully */
+    line-height: 29px;
     padding: 0 1rem;
     box-sizing: border-box;
 
@@ -347,7 +347,9 @@ body[data-theme="light"] .preset-tag.selected {
     background: var(--bg-dark-2);
     color: var(--accent-blue);
     border-color: rgba(122, 162, 247, 0.3);
-    border-bottom: none;
+    border-bottom: 3px solid var(--bg-dark-2); /* Mask underneath border strongly */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 body[data-theme="light"] .unique-block {
@@ -358,6 +360,9 @@ body[data-theme="light"] .unique-block .block-header {
     color: var(--accent-blue);
     border-color: rgba(14, 165, 233, 0.4);
     background: var(--bg-dark-2);
+    border-bottom: 3px solid var(--bg-dark-2); /* Mask underneath border strongly */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 /* Intersection Block (Intersection) - Purple Theme */
@@ -369,7 +374,9 @@ body[data-theme="light"] .unique-block .block-header {
     background: var(--bg-dark-2);
     color: var(--accent-purple);
     border-color: rgba(157, 124, 216, 0.3);
-    border-bottom: none;
+    border-bottom: 3px solid var(--bg-dark-2); /* Mask underneath border strongly */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 body[data-theme="light"] .intersection-block {
@@ -380,6 +387,9 @@ body[data-theme="light"] .intersection-block .block-header {
     color: var(--accent-purple);
     border-color: rgba(139, 92, 246, 0.4);
     background: var(--bg-dark-2);
+    border-bottom: 3px solid var(--bg-dark-2); /* Mask underneath border strongly */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 body[data-theme="light"] .group-block {
