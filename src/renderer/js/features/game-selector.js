@@ -30,12 +30,14 @@ function syncTheme() {
     ipcRenderer.invoke('get-all-settings').then(settings => {
         if (settings && settings.theme) {
             document.body.dataset.theme = settings.theme;
+            localStorage.setItem('app_theme', settings.theme);
         }
     }).catch(err => console.error('Failed to load theme:', err));
 
     ipcRenderer.on('settings-updated', (event, settings) => {
         if (settings && settings.theme) {
             document.body.dataset.theme = settings.theme;
+            localStorage.setItem('app_theme', settings.theme);
         }
     });
 }

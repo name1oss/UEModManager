@@ -11,6 +11,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        body[data-theme-pending="true"] {
+            visibility: hidden;
+        }
+    </style>
 
     <!-- SCRIPT FOR DYNAMIC UI SCALING -->
     <script>
@@ -50,7 +55,16 @@
     <script src="js/i18n/locales/ui-extra.js"></script>
 </head>
 
-<body data-theme="tokyo-night">
+<body data-theme="light" data-theme-pending="true">
+    <script>
+        (function () {
+            var theme = localStorage.getItem('app_theme') || 'light';
+            if (theme === 'tokyo-night' || theme === 'default') theme = 'dark';
+            if (theme !== 'dark' && theme !== 'light') theme = 'light';
+            document.body.dataset.theme = theme;
+            delete document.body.dataset.themePending;
+        })();
+    </script>
     <!-- Custom Title Bar -->
     <div id="title-bar">
         <div id="title-drag-region"></div>
@@ -800,23 +814,36 @@
                 <!-- Appearance Tab (Merged Theme & Background) -->
                 <div id="appearance" class="settings-tab-content">
                     <div class="appearance-options">
+                        <div class="appearance-top-row">
+                            <!-- Theme Settings Card -->
+                            <div class="settings-card theme-settings-card">
+                                <h3><i class="fas fa-palette"></i> <span data-i18n="settings.appearance.theme.title">Interface Theme</span></h3>
+                                <div class="theme-toggle-shell">
+                                    <span class="theme-toggle-label" data-i18n="theme.label.light">Light</span>
+                                    <button id="themeToggleButton" class="theme-toggle-button" type="button" role="switch" aria-checked="false" data-theme="light">
+                                        <span class="theme-toggle-thumb"></span>
+                                    </button>
+                                    <span class="theme-toggle-label" data-i18n="theme.label.dark">Dark</span>
+                                </div>
+                            </div>
 
-                        <!-- Theme Settings Card -->
-                        <div class="settings-card">
-                            <h3><i class="fas fa-palette"></i> <span
-                                    data-i18n="settings.appearance.theme.title">界面主题</span></h3>
-                            <div class="theme-selector-container" style="justify-content: space-around;">
-                                <div class="theme-option" data-theme="tokyo-night" data-i18n-title="theme.tokyo_night" title="Tokyo Night (Default)">
-                                    <div class="theme-circle tokyo-night"></div>
-                                    <span data-i18n="theme.label.default">Default</span>
-                                </div>
-                                <div class="theme-option" data-theme="light" data-i18n-title="theme.light" title="Bright (Light)">
-                                    <div class="theme-circle light"></div>
-                                    <span data-i18n="theme.label.light">Light</span>
-                                </div>
-                                <div class="theme-option" data-theme="dark" data-i18n-title="theme.dark" title="Dark">
-                                    <div class="theme-circle dark"></div>
-                                    <span data-i18n="theme.label.dark">Dark</span>
+                            <!-- Language Switcher Card -->
+                            <div class="settings-card language-settings-card">
+                                <h3><i class="fas fa-language"></i> <span data-i18n="settings.language.title">Language</span></h3>
+                                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9em;" data-i18n="settings.language.desc">Select interface language (takes effect immediately).</p>
+                                <div class="lang-switcher" id="langSwitcher">
+                                    <button class="lang-btn" data-lang="zh-CN" onclick="setLanguage('zh-CN')">
+                                        <span class="lang-flag">CN</span>
+                                        <span class="lang-name" data-i18n="settings.language.option.zh">Chinese</span>
+                                    </button>
+                                    <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">
+                                        <span class="lang-flag">EN</span>
+                                        <span class="lang-name" data-i18n="settings.language.option.en">English</span>
+                                    </button>
+                                    <button class="lang-btn" data-lang="ja" onclick="setLanguage('ja')">
+                                        <span class="lang-flag">JP</span>
+                                        <span class="lang-name" data-i18n="settings.language.option.ja">Japanese</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -824,23 +851,23 @@
                         <!-- Background Settings Card -->
                         <div class="settings-card">
                             <h3><i class="fas fa-image"></i> <span
-                                    data-i18n="settings.appearance.background.title">背景设置</span></h3>
+                                    data-i18n="settings.appearance.background.title">Background Settings</span></h3>
 
                             <div class="form-group" style="margin-bottom: 1.5rem;">
                                 <label style="display: block; margin-bottom: 0.8rem;"
-                                    data-i18n="settings.appearance.background.ops">操作:</label>
+                                    data-i18n="settings.appearance.background.ops">Actions:</label>
                                 <div class="background-controls" style="display: flex; gap: 1rem; flex-wrap: wrap;">
                                     <input type="file" id="backgroundImageUploadInput" style="display: none;"
                                         accept="image/*" onchange="handleNewBackgroundImageSelect(event)">
                                     <button class="neon-button secondary"
                                         onclick="document.getElementById('backgroundImageUploadInput').click()">
                                         <i class="fas fa-upload"></i> <span
-                                            data-i18n="settings.appearance.background.add">添加新背景</span>
+                                            data-i18n="settings.appearance.background.add">Add Background</span>
                                     </button>
                                     <button class="neon-button secondary"
                                         onclick="selectDirectory('bg_images_dir', t('settings.appearance.background.title'))">
                                         <i class="fas fa-folder-open"></i> <span
-                                            data-i18n="settings.appearance.background.change_folder">更改文件夹</span>
+                                            data-i18n="settings.appearance.background.change_folder">Change Folder</span>
                                     </button>
                                 </div>
                                 <!-- Hidden input for directory selection logic compatibility -->
@@ -850,7 +877,7 @@
                             <div class="background-controls-grid">
                                 <div class="slider-container">
                                     <div class="slider-header">
-                                        <span data-i18n="settings.appearance.background.opacity">背景透明度</span>
+                                        <span data-i18n="settings.appearance.background.opacity">Background Opacity</span>
                                         <span id="opacityValue" style="color: var(--accent-blue);">0%</span>
                                     </div>
                                     <input type="range" id="backgroundOpacity" min="0" max="100" value="0"
@@ -858,7 +885,7 @@
                                 </div>
                                 <div class="slider-container">
                                     <div class="slider-header">
-                                        <span data-i18n="settings.appearance.background.blur">背景模糊度</span>
+                                        <span data-i18n="settings.appearance.background.blur">Background Blur</span>
                                         <span id="blurValue" style="color: var(--accent-blue);">0px</span>
                                     </div>
                                     <input type="range" id="backgroundBlur" min="0" max="20" value="0" class="slider">
@@ -867,32 +894,10 @@
 
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label style="display: block; margin-bottom: 0.5rem;"
-                                    data-i18n="settings.appearance.background.select">选择背景图片:</label>
+                                    data-i18n="settings.appearance.background.select">Select Background:</label>
                                 <div id="backgroundImageThumbnails" class="image-thumbnails-container">
                                     <p class="placeholder-text" data-i18n="settings.appearance.background.loading">Loading images...</p>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Language Switcher Card -->
-                        <div class="settings-card">
-                            <h3><i class="fas fa-language"></i> <span data-i18n="settings.language.title">语言 /
-                                    Language</span></h3>
-                            <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9em;"
-                                data-i18n="settings.language.desc">选择界面显示语言（切换后立即生效）。</p>
-                            <div class="lang-switcher" id="langSwitcher">
-                                <button class="lang-btn" data-lang="zh-CN" onclick="setLanguage('zh-CN')">
-                                    <span class="lang-flag">🇨🇳</span>
-                                    <span class="lang-name" data-i18n="settings.language.option.zh">简体中文</span>
-                                </button>
-                                <button class="lang-btn" data-lang="en" onclick="setLanguage('en')">
-                                    <span class="lang-flag">🇺🇸</span>
-                                    <span class="lang-name" data-i18n="settings.language.option.en">English</span>
-                                </button>
-                                <button class="lang-btn" data-lang="ja" onclick="setLanguage('ja')">
-                                    <span class="lang-flag">🇯🇵</span>
-                                    <span class="lang-name" data-i18n="settings.language.option.ja">日本語</span>
-                                </button>
                             </div>
                         </div>
 

@@ -87,8 +87,8 @@ function refreshAllMods() {
 
 async function initializeAppearance() {
     const settings = await ipcRenderer.invoke('get-all-settings');
-    // Default to 'dark' if undefined
-    currentTheme = settings.theme || 'dark';
+    currentTheme = normalizeThemeSelection(settings.theme);
+    persistThemePreference(currentTheme);
 
     currentSelectedBackgroundImage = settings.background_image_name || '';
 
@@ -121,13 +121,7 @@ async function initializeAppearance() {
     // Apply initial dynamic styles
     applyDynamicStyles();
 
-    // Update Theme Select UI (Circular Options)
-    document.querySelectorAll('.theme-option').forEach(option => {
-        option.classList.remove('active');
-        if (option.dataset.theme === currentTheme) {
-            option.classList.add('active');
-        }
-    });
+    updateThemeToggleUI();
 
     // Validating and Setting Background Opacity UI
     const bgTransparency = Math.round((1 - currentBackgroundOpacity) * 100);
@@ -171,19 +165,16 @@ function setupAppearanceControlListeners() {
         };
     }
 
-    // New Theme Select Listener (Circular Options)
-    document.querySelectorAll('.theme-option').forEach(option => {
-        option.addEventListener('click', () => {
-            // Update Active State Visuals
-            document.querySelectorAll('.theme-option').forEach(opt => opt.classList.remove('active'));
-            option.classList.add('active');
-
-            // Apply Theme
-            currentTheme = option.dataset.theme;
+    const themeToggleButton = document.getElementById('themeToggleButton');
+    if (themeToggleButton) {
+        themeToggleButton.onclick = () => {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.body.dataset.theme = currentTheme;
-            saveSettingsOnChange(true); // Pass true for silent save
-        });
-    });
+            persistThemePreference(currentTheme);
+            updateThemeToggleUI();
+            saveSettingsOnChange(true);
+        };
+    }
 }
 
 async function loadBackgroundImages() {
@@ -430,6 +421,25 @@ async function openSettingsModal() {
 }
 
 let saveSettingsDebounceTimer;
+function normalizeThemeSelection(theme) {
+    if (theme === 'dark' || theme === 'light') return theme;
+    if (theme === 'tokyo-night' || theme === 'default') return 'dark';
+    return 'light';
+}
+
+function updateThemeToggleUI() {
+    const themeToggleButton = document.getElementById('themeToggleButton');
+    if (!themeToggleButton) return;
+
+    const normalizedTheme = normalizeThemeSelection(currentTheme);
+    themeToggleButton.dataset.theme = normalizedTheme;
+    themeToggleButton.setAttribute('aria-checked', normalizedTheme === 'dark' ? 'true' : 'false');
+}
+
+function persistThemePreference(theme) {
+    localStorage.setItem('app_theme', normalizeThemeSelection(theme));
+}
+
 function saveSettingsOnChange(silent = false) {
     clearTimeout(saveSettingsDebounceTimer);
     saveSettingsDebounceTimer = setTimeout(() => saveAllSettings(silent), 500);
@@ -452,7 +462,7 @@ function saveAllSettings(silent = false) {
         game_path: document.getElementById('game_path').value.trim(),
         nexus_download_dir: document.getElementById('nexus_download_dir').value.trim(),
         background_images_dir: newBgDir,
-        theme: currentTheme ? currentTheme : 'dark',
+        theme: normalizeThemeSelection(currentTheme),
         color_preset: 'default', // Keep for DB compatibility
         background_image_name: currentSelectedBackgroundImage,
         background_opacity: opacityToSave,

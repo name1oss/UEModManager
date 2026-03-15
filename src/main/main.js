@@ -71,6 +71,12 @@ const STATE_FILE = path.join(DATA_DIR, 'state.json');
 let activeGameId = 'StellarBlade'; // Default Global State
 let getGamesData = () => [];
 
+function normalizeTheme(theme) {
+    if (theme === 'dark' || theme === 'light') return theme;
+    if (theme === 'tokyo-night' || theme === 'default') return 'dark';
+    return 'light';
+}
+
 // --- New IPC Handler for Game Covers ---
 ipcMain.handle('save-game-cover', async (event, { gameName, sourcePath }) => {
     try {
@@ -289,7 +295,7 @@ function initDB() {
         db.prepare(`
             INSERT INTO settings (id, mods_dir, game_path, background_images_dir, background_image_name, background_opacity, background_blur, theme, color_preset, foreground_transparency, preview_delay, preview_interval, scroll_trigger_distance, nexus_download_dir)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(1, '', '', DEFAULT_BG_DIR, '', 1.0, 0.0, 'dark', 'default', 1.0, 600, 2000, 100, '');
+        `).run(1, '', '', DEFAULT_BG_DIR, '', 1.0, 0.0, 'light', 'default', 1.0, 600, 2000, 100, '');
     }
 }
 
@@ -319,15 +325,17 @@ function ensureSettingsRow(settingsId) {
         db.prepare(`
             INSERT INTO settings (id, mods_dir, game_path, background_images_dir, background_image_name, background_opacity, background_blur, theme, color_preset, foreground_transparency, preview_delay, preview_interval, scroll_trigger_distance, nexus_download_dir)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(settingsId, '', '', DEFAULT_BG_DIR, '', 1.0, 0.0, 'dark', 'default', 1.0, 600, 2000, 100, '');
+        `).run(settingsId, '', '', DEFAULT_BG_DIR, '', 1.0, 0.0, 'light', 'default', 1.0, 600, 2000, 100, '');
         row = db.prepare('SELECT * FROM settings WHERE id = ?').get(settingsId);
     }
+    row.theme = normalizeTheme(row.theme);
     return row;
 }
 
 function getSettings() {
     const settingsId = getSettingsIdForGame(activeGameId);
     let settings = { ...ensureSettingsRow(settingsId) };
+    settings.theme = normalizeTheme(settings.theme);
 
     // 动态计算 active_mods_dir 和 game_exe_path
     if (settings.game_path && fs.existsSync(settings.game_path)) {

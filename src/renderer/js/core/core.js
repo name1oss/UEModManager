@@ -56,7 +56,7 @@ const DRAG_SORT_LOCK_STORAGE_KEY = 'drag_sort_locked';
 window.dragSortLocked = false;
 
 // Appearance Settings State
-let currentTheme = 'tokyo-night';
+let currentTheme = 'light';
 let currentColorPreset = 'default';
 let currentSelectedBackgroundImage = '';
 let currentBackgroundOpacity = 1.0;

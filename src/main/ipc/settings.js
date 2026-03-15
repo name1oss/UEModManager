@@ -7,6 +7,12 @@ function registerSettingsHandlers({
     ensureSettingsRow,
     getActiveGameId,
 }) {
+    const normalizeTheme = (theme) => {
+        if (theme === 'dark' || theme === 'light') return theme;
+        if (theme === 'tokyo-night' || theme === 'default') return 'dark';
+        return 'light';
+    };
+
     ipcMain.handle('get-all-settings', () => {
         return getSettings();
     });
@@ -16,6 +22,7 @@ function registerSettingsHandlers({
             const db = getDb();
             const id = getSettingsIdForGame(getActiveGameId());
             ensureSettingsRow(id);
+            const normalizedTheme = normalizeTheme(settings.theme);
 
             const stmt = db.prepare(`
                 UPDATE settings
@@ -31,7 +38,7 @@ function registerSettingsHandlers({
                 settings.background_image_name,
                 settings.background_opacity,
                 settings.background_blur,
-                settings.theme,
+                normalizedTheme,
                 settings.color_preset,
                 settings.foreground_transparency !== undefined ? settings.foreground_transparency : 1.0,
                 settings.preview_delay !== undefined ? settings.preview_delay : 600,
@@ -41,7 +48,7 @@ function registerSettingsHandlers({
             );
 
             BrowserWindow.getAllWindows().forEach(win => {
-                win.webContents.send('settings-updated', settings);
+                win.webContents.send('settings-updated', { ...settings, theme: normalizedTheme });
             });
 
             return { success: info.changes > 0 };

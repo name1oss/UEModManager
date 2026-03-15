@@ -9,6 +9,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/game-selector.css">
+    <style>
+        body[data-theme-pending="true"] {
+            visibility: hidden;
+        }
+    </style>
     <script>
         (function () {
             function applyScaling() {
@@ -43,7 +48,16 @@
     <script src="js/features/theme.js"></script>
 </head>
 
-<body class="gs-page" data-theme="tokyo-night">
+<body class="gs-page" data-theme="light" data-theme-pending="true">
+    <script>
+        (function () {
+            var theme = localStorage.getItem('app_theme') || 'light';
+            if (theme === 'tokyo-night' || theme === 'default') theme = 'dark';
+            if (theme !== 'dark' && theme !== 'light') theme = 'light';
+            document.body.dataset.theme = theme;
+            delete document.body.dataset.themePending;
+        })();
+    </script>
     <!-- Custom Title Bar -->
     <div id="title-bar">
         <div id="title-drag-region"></div>
