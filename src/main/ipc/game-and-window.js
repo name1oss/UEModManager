@@ -49,7 +49,9 @@
                 }
 
                 try {
-                    const gameData = fs.readJsonSync(path.join(gameJsonDir, file));
+                    const filePath = path.join(gameJsonDir, file);
+                    migrateGameConfigFile(filePath);
+                    const gameData = fs.readJsonSync(filePath);
                     const validationErrors = validateGameConfig(gameData, file);
                     if (validationErrors.length > 0) {
                         validationErrors.forEach(err => console.error(`[GameConfig] Validation failed: ${err}`));
@@ -79,6 +81,23 @@
                 }
             }
 
+            games.sort((a, b) => {
+                const aOrder = Number(a?.sort_order);
+                const bOrder = Number(b?.sort_order);
+                const hasA = Number.isFinite(aOrder);
+                const hasB = Number.isFinite(bOrder);
+
+                if (hasA && hasB && aOrder !== bOrder) {
+                    return aOrder - bOrder;
+                }
+                if (hasA && !hasB) return -1;
+                if (!hasA && hasB) return 1;
+
+                const aName = String(a?.name || a?.id || '');
+                const bName = String(b?.name || b?.id || '');
+                return aName.localeCompare(bName, 'zh-CN');
+            });
+
             return games;
         } catch (error) {
             console.error('Failed to load games data:', error);
@@ -104,6 +123,67 @@
         return `Game${Date.now()}`;
     }
 
+    function normalizeFeatures(featuresInput) {
+        const source = (featuresInput && typeof featuresInput === 'object' && !Array.isArray(featuresInput))
+            ? featuresInput
+            : {};
+
+        return {
+            ...source,
+            clothingList: Boolean(source.clothingList),
+        };
+    }
+
+    function stripDerivedGameFields(gameData) {
+        if (!gameData || typeof gameData !== 'object' || Array.isArray(gameData)) {
+            return false;
+        }
+
+        let changed = false;
+
+        if (Object.prototype.hasOwnProperty.call(gameData, 'displayName')) {
+            delete gameData.displayName;
+            changed = true;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(gameData, 'uiConfig')) {
+            const uiConfig = gameData.uiConfig;
+            if (uiConfig && typeof uiConfig === 'object' && !Array.isArray(uiConfig)) {
+                const beforeCount = Object.keys(uiConfig).length;
+                delete uiConfig.windowTitle;
+                delete uiConfig.launchButtonText;
+                delete uiConfig.gamePathLabel;
+                const afterCount = Object.keys(uiConfig).length;
+
+                if (beforeCount !== afterCount) {
+                    changed = true;
+                }
+
+                if (afterCount === 0) {
+                    delete gameData.uiConfig;
+                    changed = true;
+                }
+            } else {
+                delete gameData.uiConfig;
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    function migrateGameConfigFile(filePath) {
+        try {
+            const gameData = fs.readJsonSync(filePath);
+            const changed = stripDerivedGameFields(gameData);
+            if (changed) {
+                fs.outputJsonSync(filePath, gameData, { spaces: 2 });
+            }
+        } catch (error) {
+            console.error(`[GameConfig] Migration failed: ${path.basename(filePath)}`, error.message);
+        }
+    }
+
     function getNextSettingsId() {
         const db = getDb();
         const games = getGamesData();
@@ -116,6 +196,15 @@
         const maxUsed = Math.max(maxFromSettingsTable, ...usedFromGameConfig, 0);
 
         return maxUsed + 1;
+    }
+
+    function getNextGameSortOrder() {
+        const games = getGamesData();
+        const maxSortOrder = games.reduce((max, game) => {
+            const value = Number(game?.sort_order);
+            return Number.isFinite(value) ? Math.max(max, value) : max;
+        }, 0);
+        return maxSortOrder + 1;
     }
 
     ipcMain.handle('window-minimize', () => {
@@ -174,8 +263,22 @@
 
     ipcMain.handle('get-games-list', () => getGamesData());
 
-    ipcMain.handle('update-game-details', (event, { id, name, description, cover_image }) => {
+    ipcMain.handle('update-game-details', (event, payload = {}) => {
         try {
+            const {
+                id,
+                name,
+                description,
+                cover_image,
+                executable,
+                nexusUrl,
+                features,
+            } = payload;
+            const gameName = String(name || '').trim();
+            if (!id || !gameName) {
+                return { success: false, message: 'Game ID or name is invalid' };
+            }
+
             const gamePath = path.join(gameJsonDir, `${id}.json`);
             let gameData = {};
 
@@ -189,10 +292,34 @@
                 gameData = existing;
             }
 
-            gameData.name = name;
-            gameData.description = description;
-            gameData.cover_image = cover_image;
+            gameData.name = gameName;
+            gameData.description = String(description || '').trim();
+            gameData.cover_image = String(cover_image || '').trim();
+            gameData.executable = String(executable || '').trim() || String(gameData.executable || '').trim() || `${gameData.id}.exe`;
+            gameData.nexusUrl = nexusUrl === undefined
+                ? String(gameData.nexusUrl || '').trim()
+                : String(nexusUrl || '').trim();
+            gameData.features = normalizeFeatures(features !== undefined ? features : gameData.features);
+            const currentSortOrder = Number(gameData.sort_order);
+            if (!Number.isFinite(currentSortOrder)) {
+                gameData.sort_order = getNextGameSortOrder();
+            }
+
+            // These labels are derived from game name and i18n at runtime; no longer persist them in JSON.
+            stripDerivedGameFields(gameData);
+
+            const currentSettingsId = Number(gameData.settings_id);
+            if (!Number.isInteger(currentSettingsId) || currentSettingsId <= 0) {
+                gameData.settings_id = getNextSettingsId();
+            }
+
+            const validationErrors = validateGameConfig(gameData, `${id}.json`);
+            if (validationErrors.length > 0) {
+                return { success: false, message: validationErrors.join('; ') };
+            }
+
             fs.outputJsonSync(gamePath, gameData, { spaces: 2 });
+            ensureSettingsRow(gameData.settings_id);
 
             return { success: true };
         } catch (error) {
@@ -200,7 +327,7 @@
         }
     });
 
-    ipcMain.handle('add-game', (event, { id, name, description, executable, cover_image }) => {
+    ipcMain.handle('add-game', (event, { id, name, description, executable, cover_image, nexusUrl }) => {
         try {
             const gameName = String(name || '').trim();
             if (!gameName) {
@@ -225,16 +352,9 @@
                 cover_image: String(cover_image || '').trim(),
                 executable: String(executable || '').trim() || `${gameId}.exe`,
                 settings_id: settingsId,
-                displayName: gameName,
-                nexusUrl: '',
-                features: {
-                    clothingList: false,
-                },
-                uiConfig: {
-                    windowTitle: `${gameName} Mod Manager`,
-                    launchButtonText: 'Launch Game',
-                    gamePathLabel: `${gameName} Game Root Directory:`,
-                },
+                sort_order: getNextGameSortOrder(),
+                nexusUrl: String(nexusUrl || '').trim(),
+                features: normalizeFeatures({}),
             };
 
             const validationErrors = validateGameConfig(gameData, `${gameId}.json`);
@@ -264,6 +384,42 @@
         }
 
         return { success: false };
+    });
+
+    ipcMain.handle('save-games-order', (event, payload = {}) => {
+        try {
+            const order = Array.isArray(payload.order)
+                ? payload.order.map(id => String(id || '').trim()).filter(Boolean)
+                : [];
+
+            if (!order.length) {
+                return { success: false, message: 'Order list is empty' };
+            }
+
+            const games = getGamesData();
+            const gameById = new Map(games.map(game => [String(game.id), game]));
+            const visited = new Set();
+            let rank = 1;
+
+            for (const id of order) {
+                const game = gameById.get(id);
+                if (!game || visited.has(id)) continue;
+                game.sort_order = rank++;
+                fs.outputJsonSync(path.join(gameJsonDir, `${game.id}.json`), game, { spaces: 2 });
+                visited.add(id);
+            }
+
+            for (const game of games) {
+                const id = String(game.id);
+                if (visited.has(id)) continue;
+                game.sort_order = rank++;
+                fs.outputJsonSync(path.join(gameJsonDir, `${game.id}.json`), game, { spaces: 2 });
+            }
+
+            return { success: true };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
     });
 
     return {

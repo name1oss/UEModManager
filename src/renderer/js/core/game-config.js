@@ -14,16 +14,17 @@ const gcI18n = (key, vars = {}) => {
 class GameConfig {
     constructor(data) {
         this.id = data.id;
+        this.name = data.name || data.displayName || this.id;
 
         // Merge with defaults to ensure all required properties exist
         const defaults = GameConfig.getDefaults();
-        this.displayName = data.displayName || data.name || this.id;
+        this.displayName = this.name;
         this.nexusUrl = data.nexusUrl || "";
         this.features = { ...defaults.features, ...(data.features || {}) };
         this.uiConfig = {
             ...defaults.uiConfig,
-            windowTitle: `${this.id} ${gcI18n('app.window_title_suffix')}`,
-            gamePathLabel: `${this.id} ${gcI18n('settings.paths.game.root_label')}`,
+            windowTitle: `${this.name} ${gcI18n('app.window_title_suffix')}`,
+            gamePathLabel: `${this.name} ${gcI18n('settings.paths.game.root_label')}`,
             ...(data.uiConfig || {})
         };
 
