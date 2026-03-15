@@ -89,10 +89,10 @@
     <div class="app-layout">
         <!-- Main Content -->
         <main class="main-content" style="padding-left: 2rem; padding-right: 2rem; padding-bottom: 2rem;">
-            <div class="top-controls-panel">
-                <div class="top-controls-row">
+            <div class="top-controls-panel" style="margin-bottom: 1.5rem; padding: 1.2rem 1.5rem; border-radius: 16px; background: var(--surface-color); border: 1px solid var(--border-color); backdrop-filter: blur(12px);">
+                <div class="top-controls-row" style="margin-bottom: 1rem;">
                     <div style="display: flex; align-items: center; gap: 1rem;">
-                        <h1 class="gs-title" data-i18n="game_selector.main_title" style="margin: 0;">选择游戏</h1>
+                        <h1 class="gs-title" data-i18n="game_selector.main_title" style="margin: 0; font-size: 1.6rem;">选择游戏</h1>
                     </div>
 
                     <div class="header-filters" style="margin-left: auto;">
@@ -102,7 +102,7 @@
                     </div>
                 </div>
 
-                <div class="top-controls-row bottom-row">
+                <div class="top-controls-row bottom-row" style="padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05);">
                     <div class="tags-filter-container">
                         <div class="gs-layout" role="group" aria-label="Layout Switcher">
                             <button class="layout-btn active" id="btn-layout-grid" onclick="switchLayout('grid')"
@@ -117,10 +117,10 @@
                     </div>
 
                     <div class="sort-container" style="display: flex; align-items: center; gap: 1rem; color: var(--text-secondary);">
-                        <i class="fas fa-search-minus" data-i18n-title="game_selector.scale.decrease" title="缩小"></i>
+                        <i class="fas fa-search-minus" data-i18n-title="game_selector.scale.decrease" title="缩小" style="cursor: pointer;" onclick="document.getElementById('card-scale-slider').stepDown(); document.getElementById('card-scale-slider').dispatchEvent(new Event('input'))"></i>
                         <input type="range" id="card-scale-slider" min="70" max="160" value="100"
-                            data-i18n-title="game_selector.scale.adjust" title="调整卡片尺寸与间距" style="width: 150px;">
-                        <i class="fas fa-search-plus" data-i18n-title="game_selector.scale.increase" title="放大"></i>
+                            data-i18n-title="game_selector.scale.adjust" title="调整卡片尺寸与间距" style="width: 150px; accent-color: var(--accent-blue);">
+                        <i class="fas fa-search-plus" data-i18n-title="game_selector.scale.increase" title="放大" style="cursor: pointer;" onclick="document.getElementById('card-scale-slider').stepUp(); document.getElementById('card-scale-slider').dispatchEvent(new Event('input'))"></i>
                     </div>
                 </div>
             </div>
