@@ -280,6 +280,13 @@ function hideLoadingOverlay() {
     }
 }
 
+function syncLanguageButtons() {
+    const currentLang = typeof getCurrentLang === 'function' ? getCurrentLang() : 'zh-CN';
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === currentLang);
+    });
+}
+
 // --- Keyboard Shortcuts ---
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
@@ -391,10 +398,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof applyI18n === 'function') {
             applyI18n();
         }
-        // Highlight the currently active language button in Settings
-        const currentLang = typeof getCurrentLang === 'function' ? getCurrentLang() : 'zh-CN';
-        document.querySelectorAll('.lang-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.lang === currentLang);
+        syncLanguageButtons();
+        window.addEventListener('app-language-changed', () => {
+            syncLanguageButtons();
         });
 
         // Step 1: Setup window controls

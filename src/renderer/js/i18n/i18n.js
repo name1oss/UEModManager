@@ -4,7 +4,7 @@
 //   t('key')                → translated string (fallback to key if missing)
 //   t('key', {name:'Foo'}) → interpolated: "{name}" → "Foo"
 //   applyI18n()            → walk the DOM and replace [data-i18n] elements
-//   setLanguage('en')      → switch language and reload
+//   setLanguage('en')      → switch language in-place
 //   getCurrentLang()       → returns current lang code string
 // ==========================================================================
 
@@ -13,6 +13,34 @@
 
     const SUPPORTED = ['zh-CN', 'en', 'ja'];
     const STORAGE_KEY = 'app_language';
+
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = false;
+            script.dataset.i18nDynamic = 'true';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error(`Failed to load locale script: ${src}`));
+            document.head.appendChild(script);
+        });
+    }
+
+    async function loadLocaleBundle(lang) {
+        document.querySelectorAll('script[data-i18n-dynamic="true"]').forEach(el => el.remove());
+        window.__LOCALE_DATA__ = {};
+
+        const cacheBust = `?t=${Date.now()}`;
+        const scripts = [
+            `js/i18n/locales/${lang}.js${cacheBust}`,
+            `js/i18n/locales/extra.js${cacheBust}`,
+            `js/i18n/locales/ui-extra.js${cacheBust}`
+        ];
+
+        for (const src of scripts) {
+            await loadScript(src);
+        }
+    }
 
     // -----------------------------------------------------------------------
     // Core translation function
@@ -63,11 +91,13 @@
         return SUPPORTED.includes(stored) ? stored : 'zh-CN';
     }
 
-    function setLanguage(lang) {
+    async function setLanguage(lang) {
         if (!SUPPORTED.includes(lang)) return;
         localStorage.setItem(STORAGE_KEY, lang);
-        // Reload the page to apply the new locale script
-        window.location.reload();
+        document.documentElement.lang = lang;
+        await loadLocaleBundle(lang);
+        applyI18n();
+        window.dispatchEvent(new CustomEvent('app-language-changed', { detail: { lang } }));
     }
 
     // -----------------------------------------------------------------------
@@ -94,4 +124,5 @@
     window.setLanguage = setLanguage;
     window.getCurrentLang = getCurrentLang;
     window.__i18n_injectLocale = injectLocaleScript;
+    window.__i18n_loadLocaleBundle = loadLocaleBundle;
 })();
